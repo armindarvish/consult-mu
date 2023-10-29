@@ -67,7 +67,7 @@ Can be either a string, or a list of strings or expressions."
 (defcustom consult-mu-group-by 'date
   "What field to sort results by "
   :group 'consult-mu
-  :type 'string)
+  :type 'symbol)
 
 (defcustom consult-mu-preview-buffer-name "*consult-mu-preview*"
   "Default name to use for preview buffers showing repo readmes retrieved by \"gh repo view\"."
@@ -388,13 +388,14 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
 #+begin_src emacs-lisp
 
 (defun consult-mu--group-name (cand)
-(substring (get-text-property 0 consult-mu-group-by cand)))
+(get-text-property 0 (if (not (keywordp consult-mu-group-by))  (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by)  cand))
 
 (defun consult-mu--group (cand transform)
   "Group candidates in minibuffer for consult-mu.
 This is passed as GROUP to `consult--read' and is used to group emails by date."
   (let ((name (consult-mu--group-name cand)))
-    (if transform (substring cand) name)))
+    (if transform (substring cand) (substring cand))
+    ))
 #+end_src
 ****** actions
 In this section we define action functions that can be run on a candidate for example view, reply, forward, etc.
@@ -402,8 +403,10 @@ In this section we define action functions that can be run on a candidate for ex
 #+begin_src emacs-lisp
 (defun consult-mu--view (msgid)
   "Opens message with MSGID in `mu4e-headers-view'."
-(mu4e-view-message-with-message-id
-   msgid))
+  (unless (mu4e-running-p) (mu4e--server-start))
+  (save-mark-and-excursion
+  (mu4e-view-message-with-message-id
+   msgid)))
 
 (defun consult-mu--view-action (cand)
 "Opens the canidate, CAND, from consult-mu.
@@ -538,3 +541,139 @@ For more details on consult--async functionalities, see `consult-grep' and the o
 #+begin_src emacs-lisp
 ;;; filename ends here
 #+end_src
+
+* consult-mu-embark.el
+:PROPERTIES:
+:header-args:emacs-lisp: :results none :mkdirp yes :link yes :tangle ./consult-mu-embark.el
+:END:
+*** Header
+#+begin_src  emacs-lisp
+;;; consult-mu-embark.el --- Emabrk Actions for consult-mu -*- lexical-binding: t -*-
+
+;; Copyright (C) 2021-2023
+
+;; Author: Armin Darvish
+;; Maintainer: Armin Darvish
+;; Created: 2023
+;; Version: 0.1
+;; Package-Requires: ((emacs "28.0") (consult "0.34") (mu "1.10.7"))
+;; Homepage: https://github.com/armindarvish/consult-mu
+;; Keywords: convenience, matching, tools, email
+
+;;; Commentary:
+
+;;; Code:
+#+end_src
+
+*** Main
+This section includes additional useful embark actions as well as possible keymaps. This will be provided as examples and starting point to users, so that they can make their own custom embark actions and functions.
+
+#+begin_src emacs-lisp
+;;; Requirements
+(require 'embark)
+(require 'consult-mu)
+
+
+;;; Define Embark Action Functions
+(defun consult-mu-embark-mark-for-delete (cand)
+"Mark message for delete"
+(let ((msgid (get-text-property 0 :msgid cand)))
+  (mu4e-view-message-with-message-id
+   msgid)
+  (with-current-buffer (mu4e-get-view-buffer)
+  (mu4e-view-mark-for-mail-delete)
+  )))
+
+(defun consult-mu-embark-trash-message (cand)
+  (let* ((msgid (get-text-property 0 :msgid cand))
+        (maildir (mu4e-message-field msgid :maildir))
+        )
+    (print (format "%s:%s" msgid maildir))
+    (mu4e-view-message-with-message-id msgid)
+    )
+)
+
+;;; Define Embark Keymaps
+
+(defvar-keymap consult-mu-embark-general-actions-map
+  :doc "Keymap for consult-mu-embark"
+  :parent embark-general-map
+  "d" #'consult-mu-embark-mark-for-delete
+  "t" #'consult-mu-embark-trash-message
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
+
+;;; Provide `consul-gh-embark' module
+
+(provide 'consult-mu-embark)
+#+end_src
+
+* Tests
+
+#+begin_src emacs-lisp
+my:test
+;;(plist-get my:test :meta)
+#+end_src
+
+#+RESULTS:
+| :path | /Users/armin/.maildir/gmail/armindarvish/Inbox/cur/1698287678.79045_1.armins-air,U=2337:2,S | :size | 45432 | :changed | (25917 34531 0) | :date | (25913 52078 0) | :from | ((:email Armin.Darvish@us.bosch.com :name Darvish Armin (CR/RCS3-NA))) | :message-id | AM6PR10MB27890776D2FA088DF55813ACCCDDA@AM6PR10MB2789.EURPRD10.PROD.OUTLOOK.COM | :priority | normal | :subject | Your agenda tomorrow | :to | ((:email armindarvish@gmail.com :name armindarvish@gmail.com)) | :maildir | /gmail/armindarvish/Inbox | :flags | (seen attach personal) | :docid | 14751 | :meta | (:path 1b7:z :level 0 :date n6539cb6e :data-tstamp (0 0 0) :root t ...) |
+
+#+begin_src emacs-lisp
+(defun my:testfunc (msgid)
+(mu4e-search "" nil nil t msgid nil)
+(with-current-buffer (mu4e-get-headers-buffer)
+(print (plist-get (mu4e-message-at-point) :docid))
+))
+#+end_src
+
+#+RESULTS:
+: my:testfunc
+
+#+begin_src emacs-lisp
+(save-mark-and-excursion
+(mu4e-search "" nil nil nil "F2.B0.23762.8015D356@hpnplmomiw01" nil)
+)
+#+end_src
+
+
+#+begin_src emacs-lisp
+(my:testfunc "F2.B0.23762.8015D356@hpnplmomiw01")
+#+end_src
+
+#+begin_src emacs-lisp
+(mu4e-headers-goto-message-id "F2.B0.23762.8015D356@hpnplmomiw01")
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src emacs-lisp
+(mu4e-headers-goto-message-id "AM6PR10MB27890776D2FA088DF55813ACCCDDA@AM6PR10MB2789.EURPRD10.PROD.OUTLOOK.COM")
+#+end_src
+
+#+RESULTS:
+
+
+
+#+begin_src emacs-lisp
+(mu4e--server-find
+     (identity "test")
+     mu4e-search-threads
+     mu4e-search-sort-field
+     mu4e-search-sort-direction
+     300
+     mu4e-search-skip-duplicates
+     mu4e-search-include-related)
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src emacs-lisp
+(with-current-buffer
+(mu4e-get-headers-buffer "*consult-mu-headers*" t)
+(mu4e-search "test"))
+#+end_src
+
+#+RESULTS:

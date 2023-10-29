@@ -50,7 +50,7 @@ Can be either a string, or a list of strings or expressions."
 (defcustom consult-mu-group-by 'date
   "What field to sort results by "
   :group 'consult-mu
-  :type 'string)
+  :type 'symbol)
 
 (defcustom consult-mu-preview-buffer-name "*consult-mu-preview*"
   "Default name to use for preview buffers showing repo readmes retrieved by \"gh repo view\"."
@@ -329,13 +329,14 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
       )
 
 (defun consult-mu--group-name (cand)
-(substring (get-text-property 0 consult-mu-group-by cand)))
+(get-text-property 0 (if (not (keywordp consult-mu-group-by))  (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by)  cand))
 
 (defun consult-mu--group (cand transform)
   "Group candidates in minibuffer for consult-mu.
 This is passed as GROUP to `consult--read' and is used to group emails by date."
   (let ((name (consult-mu--group-name cand)))
-    (if transform (substring cand) name)))
+    (if transform (substring cand) (substring cand))
+    ))
 
 (defun consult-mu--view (msgid)
   "Opens message with MSGID in `mu4e-headers-view'."
