@@ -502,7 +502,7 @@ Optionally, show TEXT. Overrides `mu4e~headers-clear' for `consult-mu'."
 ******* update headers
 #+begin_src emacs-lisp
 (defun consult-mu--update-headers (query ignore-history msgid)
-  "Search for query EXPR.
+  "Search for QUERY.
 Update `consult-mu-headers-buffer-name' but do not switch to buffer.
 
 If IGNORE-HISTORY is true, do *not* update the query history stack, `mu4e--search-query-past'.
@@ -543,13 +543,18 @@ Put cursor on message with MSGID."
              mu4e-search-threads
              mu4e-search-sort-field
              mu4e-search-sort-direction
-             maxnum
+             mu4e-search-results-limit
              mu4e-search-skip-duplicates
              mu4e-search-include-related))
-          (while (or (equal (buffer-substring (point-min) (point-max)) "Searching...") (string-empty-p (buffer-substring (point-min) (point-max))))
-            (sleep-for 0.2))))))
+          (while (or (string-empty-p (buffer-substring (point-min) (point-max)))
+                     (equal (buffer-substring (point-min) (+ (point-min) (length mu4e~search-message))) mu4e~search-message)
+                     (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results)))
+                     )
+            (sleep-for 0.02)))
+        )))
   (unless inhibit-read-only (setq inhibit-read-only t))
   )
+
 #+end_src
 
 ******* update-view
@@ -574,8 +579,11 @@ Put cursor on message with MSGID."
               ;; wait until the view buffer is updated. Otherwise the cl-letf override is reversed and nothing is shown!
               (while (or (not (get-buffer consult-mu-view-buffer-name))
                          (with-current-buffer consult-mu-view-buffer-name
-                           (string-empty-p (buffer-substring (point-min) (point-max)))))
-                (sleep-for 0.05))
+                           (or
+                           (string-empty-p (buffer-substring (point-min) (point-max)))
+                           (equal (buffer-substring (point-min) (+ (point-min) (length "Loading..."))) "Loading...")
+                           )))
+                (sleep-for 0.005))
               ;; if the headers buffer is open, bury it, so does not take space when previewing messages!
               ;;(bury-buffer)
               )
