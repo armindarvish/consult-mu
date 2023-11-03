@@ -447,7 +447,7 @@ Optionally, show TEXT. Overrides `mu4e~headers-clear' for `consult-mu'."
           (insert (propertize text 'face 'mu4e-system-face 'intangible t))))))
 #+end_src
 
-******* set search properties from opts
+******* set mu4e search properties from opts
 #+begin_src emacs-lisp
 (defun consult-mu--set-mu4e-search-sortfield (opts)
   (let* ((sortfield (cond
