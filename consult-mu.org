@@ -941,6 +941,7 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
 For more details on consult--async functionalities, see `consult-grep' and the official manual of consult, here: https://github.com/minad/consult.
 "
   (interactive)
+  (unless (mu4e-running-p) (mu4e--server-start))
   (when (get-buffer consult-mu-view-buffer-name)
   (kill-buffer (get-buffer consult-mu-view-buffer-name)))
   (when (get-buffer consult-mu-headers-buffer-name)
