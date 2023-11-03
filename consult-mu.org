@@ -447,20 +447,72 @@ Optionally, show TEXT. Overrides `mu4e~headers-clear' for `consult-mu'."
           (insert (propertize text 'face 'mu4e-system-face 'intangible t))))))
 #+end_src
 
+******* set search properties from opts
+#+begin_src emacs-lisp
+(defun consult-mu--set-mu4e-search-sortfield (opts)
+  (let* ((sortfield (cond
+                     ((member "-s" opts) (nth (+ (cl-position "-s" opts :test 'equal) 1) opts))
+                     ((member "--sortfield" opts) (nth (+ (cl-position "--sortfield" opts :test 'equal) 1) opts))
+                     (t consult-mu-search-sort-field))))
+    (pcase sortfield
+      ('nil
+       consult-mu-search-sort-field)
+      ((or "date" "d")
+       :date)
+      ((or "subject" "s")
+       :subject)
+      ((or "size" "z")
+       :size)
+      ((or "prio" "p")
+       :prio)
+      ((or "from" "f")
+       :from)
+      ((or "to" "t")
+       :to)
+      ((or "list" "v")
+       :list)
+      (_
+       consult-mu-search-sort-field)
+      )))
+
+(defun consult-mu--set-mu4e-search-sort-direction (opts)
+  (if (or (member "-z" opts) (member "--reverse" opts))
+      (pcase consult-mu-search-sort-direction
+        ('descending
+         'ascending)
+        ('ascending
+         'descending))
+    consult-mu-search-sort-direction))
+
+(defun consult-mu--set-mu4e-skip-duplicates (opts)
+  (if (member "--skip-dups" opts) t mu4e-search-skip-duplicates))
+
+(defun consult-mu--set-mu4e-results-limit (opts)
+    (cond
+     ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
+     ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
+     (t consult-mu-maxnum))
+  )
+
+(defun consult-mu--set-mu4e-threads (opts)
+(if (not (equal mu4e-search-sort-field :date)) 'nil 't))
+
+#+end_src
+
 ******* update headers
 #+begin_src emacs-lisp
-(defun consult-mu--update-headers (expr ignore-history msgid)
+(defun consult-mu--update-headers (query ignore-history msgid)
   "Search for query EXPR.
 Update `consult-mu-headers-buffer-name' but do not switch to buffer.
 
 If IGNORE-HISTORY is true, do *not* update the query history stack, `mu4e--search-query-past'.
 
 Put cursor on message with MSGID."
-
   (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
            (inhibit-read-only t)
+           (expr (car (consult--command-split query)))
            (rewritten-expr (funcall mu4e-query-rewrite-function expr))
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
            )
@@ -470,7 +522,7 @@ Put cursor on message with MSGID."
           (mu4e-headers-mode)
           (setq-local mu4e-view-buffer-name consult-mu-view-buffer-name)
           (unless ignore-history
-            ;; save the old present query to the history list
+            ; save the old present query to the history list
             (when mu4e--search-last-query
               (mu4e--search-push-query mu4e--search-last-query 'past)))
           (setq mu4e--search-last-query rewritten-expr)
@@ -479,14 +531,21 @@ Put cursor on message with MSGID."
           (run-hook-with-args 'mu4e-search-hook expr)
           (consult-mu--headers-clear mu4e~search-message)
           (setq mu4e~headers-search-start (float-time))
-          (mu4e--server-find
-           rewritten-expr
-           mu4e-search-threads
-           mu4e-search-sort-field
-           mu4e-search-sort-direction
-           maxnum
-           mu4e-search-skip-duplicates
-           mu4e-search-include-related)
+          (pcase-let* ((`(,arg . ,opts) (consult--command-split query))
+                       (mu4e-search-sort-field (consult-mu--set-mu4e-search-sortfield opts))
+                       (mu4e-search-sort-direction (consult-mu--set-mu4e-search-sort-direction opts))
+                       (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
+                       (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
+                       (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
+                       )
+            (mu4e--server-find
+             rewritten-expr
+             mu4e-search-threads
+             mu4e-search-sort-field
+             mu4e-search-sort-direction
+             maxnum
+             mu4e-search-skip-duplicates
+             mu4e-search-include-related))
           (while (equal (buffer-substring (point-min) (point-max)) "Searching...")
             (sleep-for 0.2))))))
   (unless inhibit-read-only (setq inhibit-read-only t))
@@ -699,6 +758,73 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
 **** consult-mu
 ****** transform
 #+begin_src emacs-lisp
+;; (defun consult-mu--transform (async builder)
+;;   "Adds annotation to minibuffer candiates for `consult-mu'.
+
+;; Returns ASYNC function after formating results with `consult-mu--format-candidate'.
+;; BUILDER is the command line builder function (e.g. `consult-mu--builder')."
+;;   (let ((input)
+;;         (buffer (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
+;;     `(lambda (action)
+;;        (cond
+;;         ((stringp action)
+;;          (setq input action)
+;;          (with-current-buffer ,buffer
+;;            ;;set mu4e variables so the headers buffer matches the results from commandline `mu` search
+;;            (pcase-let* ((`(,arg . ,opts) (consult--command-split action))
+;;                         (sortfield (cond
+;;                                     ((member "-s" opts) (nth (+ (cl-position "-s" opts :test 'equal) 1) opts))
+;;                                     ((member "--sortfield" opts) (nth (+ (cl-position "--sortfield" opts :test 'equal) 1) opts))
+;;                                     (t consult-mu-search-sort-field)))
+;;                         (mu4e-search-sort-field
+;;                          (pcase sortfield
+;;                            ('nil
+;;                             consult-mu-search-sort-field)
+;;                            ((or "date" "d")
+;;                             :date)
+;;                            ((or "subject" "s")
+;;                             :subject)
+;;                            ((or "size" "z")
+;;                             :size)
+;;                            ((or "prio" "p")
+;;                             :prio)
+;;                            ((or "from" "f")
+;;                             :from)
+;;                            ((or "to" "t")
+;;                             :to)
+;;                            ((or "list" "v")
+;;                             :list)
+;;                            (_
+;;                             consult-mu-search-sort-field)
+;;                            ))
+;;                          (mu4e-search-sort-direction
+;;                           (if
+;;                               (or (member "-z" opts) (member "--reverse" opts))
+;;                               (pcase consult-mu-search-sort-direction
+;;                                 ('descending
+;;                                  'ascending)
+;;                                 ('ascending
+;;                                  'descending))
+;;                             consult-mu-search-sort-direction))
+;;                          (mu4e-search-skip-duplicates
+;;                           (if (member "--skip-dups" opts) t mu4e-search-skip-duplicates))
+;;                          (mu4e-search-results-limit
+;;                           (cond
+;;                            ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
+;;                            ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
+;;                            (t consult-mu-maxnum)))
+;;                          (mu4e-search-threads
+;;                           (if (not (equal mu4e-search-sort-field :date)) nil t))
+;;                          )
+;;                         (consult-mu--update-headers arg nil nil)))
+;;            (funcall ,async action)
+;;            )
+;;          (t (mapcar (lambda (string)
+;;                       (consult-mu--format-candidate string input t))
+;;                     (funcall ,async action)))
+;;          ))))
+
+
 (defun consult-mu--transform (async builder)
   "Adds annotation to minibuffer candiates for `consult-mu'.
 
@@ -711,55 +837,7 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
         ((stringp action)
          (setq input action)
          (with-current-buffer ,buffer
-           ;;set mu4e variables so the headers buffer matches the results from commandline `mu` search
-           (pcase-let* ((`(,arg . ,opts) (consult--command-split action))
-                        (sortfield (cond
-                                    ((member "-s" opts) (nth (+ (cl-position "-s" opts :test 'equal) 1) opts))
-                                    ((member "--sortfield" opts) (nth (+ (cl-position "--sortfield" opts :test 'equal) 1) opts))
-                                    (t consult-mu-search-sort-field)))
-                        (mu4e-search-sort-field
-                         (pcase sortfield
-                           ('nil
-                            consult-mu-search-sort-field)
-                           ((or "date" "d")
-                            :date)
-                           ((or "subject" "s")
-                            :subject)
-                           ((or "size" "z")
-                            :size)
-                           ((or "prio" "p")
-                            :prio)
-                           ((or "from" "f")
-                            :from)
-                           ((or "to" "t")
-                            :to)
-                           ((or "list" "v")
-                            :list)
-                           (_
-                            consult-mu-search-sort-field)
-                           ))
-                         (mu4e-search-sort-direction
-                          (if
-                              (or (member "-z" opts) (member "--reverse" opts))
-                              (pcase consult-mu-search-sort-direction
-                                ('descending
-                                 'ascending)
-                                ('ascending
-                                 'descending))
-                            consult-mu-search-sort-direction))
-                         (mu4e-search-skip-duplicates
-                          (if (member "--skip-dups" opts) t mu4e-search-skip-duplicates))
-                         (mu4e-search-results-limit
-                          (cond
-                           ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
-                           ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
-                           (t consult-mu-maxnum)))
-                         (mu4e-search-threads
-                          (if (not (equal mu4e-search-sort-field :date)) nil t))
-                         )
-             ;; (print (format "sortfield=%s, direction=%s, skip-dup=%s, maxnum=%s" mu4e-search-sort-field  mu4e-search-sort-direction mu4e-search-skip-duplicates mu4e-search-results-limit))
-                        (consult-mu--update-headers arg nil nil)))
-           ;;(unless inhibit-read-only (setq inhibit-read-only t))
+           (consult-mu--update-headers action nil nil))
            (funcall ,async action)
            )
          (t (mapcar (lambda (string)
@@ -786,7 +864,8 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
     (setq opts (append opts (list "--nocolor")))
     (setq opts (append opts (list "--fields" (format "i%sd%sf%ss"
                                                      consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
-    (setq opts (append opts (list "--sortfield" sortfield)))
+    (unless (or (member "-s" flags) (member "--sortfiled" flags))
+    (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
     (if threads (setq opts (append opts (list "--thread"))))
     (if skip-dups (setq opts (append opts (list "--skip-dups"))))
     (unless (or (member "-n" flags) (member "--maxnum" flags))
