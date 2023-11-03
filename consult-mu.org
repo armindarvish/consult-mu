@@ -704,15 +704,14 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
 
 ****** group
 #+begin_src emacs-lisp
-
 (defun consult-mu--group-name (cand)
-(get-text-property 0 (if (not (keywordp consult-mu-group-by))  (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by)  cand))
+(get-text-property 0 (if (not (keywordp consult-mu-group-by)) (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by) cand))
 
 (defun consult-mu--group (cand transform)
   "Group candidates in minibuffer for consult-mu.
 This is passed as GROUP to `consult--read' and is used to group emails by date."
   (let ((name (consult-mu--group-name cand)))
-    (if transform (substring cand) (substring name))
+    (if transform (substring cand) name)
     ))
 #+end_src
 ****** actions
