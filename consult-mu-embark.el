@@ -18,7 +18,6 @@
 (require 'embark)
 (require 'consult-mu)
 
-
 ;;; Define Embark Action Functions
 (defun consult-mu-embark-default-action (cand)
   "Open the link in an emacs buffer"

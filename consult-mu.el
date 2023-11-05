@@ -883,6 +883,9 @@ For more details on consult--async functionalities, see `consult-grep' and the o
   (let* ((sel
         (consult-mu--async "Search For:  " #'consult-mu--builder initial)
          ))
+    (save-mark-and-excursion
+      (consult-mu--execute-all-marks)
+      )
     (if noaction
         sel
       (progn
