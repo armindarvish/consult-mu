@@ -1062,48 +1062,48 @@ This section includes additional useful embark actions as well as possible keyma
          (newcand (cons cand `(:msgid ,msgid :subject ,subject :sender ,sender :datetime ,datetime :date ,date :time ,time :query ,query))))
    (funcall consult-mu-action newcand)))
 
-(defun consult-mu-embark-mark-for-refile (cand)
-"Mark message for delete"
-(when-let* ((msgid (get-text-property 0 :msgid cand))
-            (buf (get-buffer consult-mu-headers-buffer-name))
-            )
-;;(consult-mu-headers-goto-message-id msgid)
-  (with-current-buffer buf
-    (goto-char (point-min))
-      (if (equal (mu4e-message-field-at-point :msgid) msgid)
-          (mu4e-headers-mark-for-refile)
-        (progn
-          (mu4e-headers-goto-message-id msgid)
-          (mu4e-headers-mark-for-refile))))))
+;; (defun consult-mu-embark-mark-for-refile (cand)
+;; "Mark message for delete"
+;; (when-let* ((msgid (get-text-property 0 :msgid cand))
+;;             (buf (get-buffer consult-mu-headers-buffer-name))
+;;             )
+;; ;;(consult-mu-headers-goto-message-id msgid)
+;;   (with-current-buffer buf
+;;     (goto-char (point-min))
+;;       (if (equal (mu4e-message-field-at-point :msgid) msgid)
+;;           (mu4e-headers-mark-for-refile)
+;;         (progn
+;;           (mu4e-headers-goto-message-id msgid)
+;;           (mu4e-headers-mark-for-refile))))))
 
-(defun consult-mu-embark-mark-for-trash (cand)
-"Mark message for delete"
-(when-let* ((msgid (get-text-property 0 :msgid cand))
-            (buf (get-buffer consult-mu-headers-buffer-name))
-            )
-;;(consult-mu-headers-goto-message-id msgid)
-  (with-current-buffer buf
-    (goto-char (point-min))
-      (if (equal (mu4e-message-field-at-point :msgid) msgid)
-          (mu4e-headers-mark-for-refile)
-        (progn
-          (mu4e-headers-goto-message-id msgid)
-          (mu4e-headers-mark-for-trash))))))
+;; (defun consult-mu-embark-mark-for-trash (cand)
+;; "Mark message for delete"
+;; (when-let* ((msgid (get-text-property 0 :msgid cand))
+;;             (buf (get-buffer consult-mu-headers-buffer-name))
+;;             )
+;; ;;(consult-mu-headers-goto-message-id msgid)
+;;   (with-current-buffer buf
+;;     (goto-char (point-min))
+;;       (if (equal (mu4e-message-field-at-point :msgid) msgid)
+;;           (mu4e-headers-mark-for-refile)
+;;         (progn
+;;           (mu4e-headers-goto-message-id msgid)
+;;           (mu4e-headers-mark-for-trash))))))
 
 
-(defun consult-mu-embark-mark-for-mail-delete (cand)
-"Mark message for delete"
-(when-let* ((msgid (get-text-property 0 :msgid cand))
-            (buf (get-buffer consult-mu-headers-buffer-name))
-            )
-;;(consult-mu-headers-goto-message-id msgid)
-  (with-current-buffer buf
-    (goto-char (point-min))
-      (if (equal (mu4e-message-field-at-point :msgid) msgid)
-          (mu4e-headers-mark-for-refile)
-        (progn
-          (mu4e-headers-goto-message-id msgid)
-          (mu4e-headers-mark-for-mail-delete))))))
+;; (defun consult-mu-embark-mark-for-mail-delete (cand)
+;; "Mark message for delete"
+;; (when-let* ((msgid (get-text-property 0 :msgid cand))
+;;             (buf (get-buffer consult-mu-headers-buffer-name))
+;;             )
+;; ;;(consult-mu-headers-goto-message-id msgid)
+;;   (with-current-buffer buf
+;;     (goto-char (point-min))
+;;       (if (equal (mu4e-message-field-at-point :msgid) msgid)
+;;           (mu4e-headers-mark-for-refile)
+;;         (progn
+;;           (mu4e-headers-goto-message-id msgid)
+;;           (mu4e-headers-mark-for-mail-delete))))))
 
 ;; (defun consult-mu-embark-refile (cand)
 ;; "Mark message for delete"
@@ -1128,25 +1128,23 @@ This section includes additional useful embark actions as well as possible keyma
 ;;   (mu4e-view-mark-for-mail-delete)
 ;;   )))
 
-(defun consult-mu-embark-trash-message (cand)
-  (let* ((msgid (get-text-property 0 :msgid cand))
-         (msg (consult-mu--get-message-by-id msgid))
-         (docid (mu4e-message-field msg :maildir))
-        (maildir (mu4e-message-field msg :maildir))
-        )
-    ;;(mu4e-view-message-with-message-id msgid)
-    )
-)
+;; (defun consult-mu-embark-trash-message (cand)
+;;   (let* ((msgid (get-text-property 0 :msgid cand))
+;;          (msg (consult-mu--get-message-by-id msgid))
+;;          (docid (mu4e-message-field msg :maildir))
+;;         (maildir (mu4e-message-field msg :maildir))
+;;         )
+;;     ;;(mu4e-view-message-with-message-id msgid)
+;;     )
+;; )
 
 ;;; Define Embark Keymaps
 
 (defvar-keymap consult-mu-embark-general-actions-map
   :doc "Keymap for consult-mu-embark"
   :parent embark-general-map
-  "r" #'consult-mu-embark-mark-for-refile
-  "t" #'consult-mu-embark-mark-for-trash
-  "X" #'consult-mu-embark-mark-for-mail-delete
 )
+
 (add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
 
 
@@ -1154,13 +1152,49 @@ This section includes additional useful embark actions as well as possible keyma
   :doc "Keymap for consult-mu-embark"
   :parent consult-mu-embark-general-actions-map
   )
-
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
 
+;; macro for defining functions for marks
+(defmacro consult-mu-embark--defun-mark-for (mark)
+  "Define a function mu4e-view-mark-for- MARK."
+  (let ((funcname (intern (format "consult-mu-embark-mark-for-%s" mark)))
+        (docstring (format "Mark the current message for %s." mark)))
+    `(progn
+       (defun ,funcname (cand) ,docstring
+              (when-let* ((msgid (get-text-property 0 :msgid cand))
+                          (buf (get-buffer consult-mu-headers-buffer-name))
+                          )
+                (with-current-buffer buf
+                  (goto-char (point-min))
+                  (if (equal (mu4e-message-field-at-point :msgid) msgid)
+                      (mu4e-headers-mark-and-next ',mark)
+                    (progn
+                      (mu4e-headers-goto-message-id msgid)
+                      (mu4e-headers-mark-and-next ',mark)
+                      ))))))))
 
+;; add embark functions for marks
+(defun consult-mu-embark--defun-func-for-marks (marks)
+(mapcar (lambda (mark) (eval `(consult-mu-embark--defun-mark-for ,mark))) marks))
 
-;;(add-to-list 'embark-default-action-overrides '(consult-mu . consult-mu-embark-default-action))
+(consult-mu-embark--defun-func-for-marks (mapcar 'car mu4e-marks))
+
+;; add mark keys to keymap
+(defun consult-mu-embark--add-keys-for-marks (marks)
+  (mapcar (lambda (mark)
+            (let* ((key (plist-get (cdr mark) :char))
+                  (key (cond ((consp key) (car key)) ((stringp key) key)))
+                  (func (intern (concat "consult-mu-embark-mark-for-" (format "%s" (car mark)))))
+                  (key (concat "m" key)))
+              (define-key consult-mu-embark-messages-actions-map key func)
+              ))
+          marks))
+
+(consult-mu-embark--add-keys-for-marks mu4e-marks)
+
+;; change the default action
 (add-to-list 'embark-default-action-overrides '(consult-mu-messages . consult-mu-embark-default-action))
+
 
 ;;; Provide `consul-gh-embark' module
 
