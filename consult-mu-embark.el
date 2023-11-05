@@ -34,29 +34,62 @@
 
 (defun consult-mu-embark-mark-for-refile (cand)
 "Mark message for delete"
-(let* ((msgid (get-text-property 0 :msgid cand))
-        )
-(consult-mu-headers-goto-message-id msgid)
-(when-let ((buffer consult-mu-headers-buffer-name))
-    (with-current-buffer buffer
-      (display-buffer buffer)
-      (mu4e-view-mark-for-refile)))))
+(when-let* ((msgid (get-text-property 0 :msgid cand))
+            (buf (get-buffer consult-mu-headers-buffer-name))
+            )
+;;(consult-mu-headers-goto-message-id msgid)
+  (with-current-buffer buf
+    (goto-char (point-min))
+      (if (equal (mu4e-message-field-at-point :msgid) msgid)
+          (mu4e-headers-mark-for-refile)
+        (progn
+          (mu4e-headers-goto-message-id msgid)
+          (mu4e-headers-mark-for-refile))))))
 
-(defun consult-mu-embark-refile (cand)
+(defun consult-mu-embark-mark-for-trash (cand)
 "Mark message for delete"
-(let* ((msgid (get-text-property 0 :msgid cand))
-       (msg (consult-mu--get-message-by-id msgid))
-       (query (get-text-property 0 :query cand))
-        )
-(consult-mu-headers-goto-message-id msgid)
-(when-let ((buffer consult-mu-headers-buffer-name))
-    (with-current-buffer buffer
-      (display-buffer buffer)
-      (mu4e-headers-mark-for-refile)
-      (mu4e-mark-execute-all)
-      (mu4e~headers-update-handler msg t nil)
-      (consult-mu--update-headers query nil msgid)
-      ))))
+(when-let* ((msgid (get-text-property 0 :msgid cand))
+            (buf (get-buffer consult-mu-headers-buffer-name))
+            )
+;;(consult-mu-headers-goto-message-id msgid)
+  (with-current-buffer buf
+    (goto-char (point-min))
+      (if (equal (mu4e-message-field-at-point :msgid) msgid)
+          (mu4e-headers-mark-for-refile)
+        (progn
+          (mu4e-headers-goto-message-id msgid)
+          (mu4e-headers-mark-for-trash))))))
+
+
+(defun consult-mu-embark-mark-for-mail-delete (cand)
+"Mark message for delete"
+(when-let* ((msgid (get-text-property 0 :msgid cand))
+            (buf (get-buffer consult-mu-headers-buffer-name))
+            )
+;;(consult-mu-headers-goto-message-id msgid)
+  (with-current-buffer buf
+    (goto-char (point-min))
+      (if (equal (mu4e-message-field-at-point :msgid) msgid)
+          (mu4e-headers-mark-for-refile)
+        (progn
+          (mu4e-headers-goto-message-id msgid)
+          (mu4e-headers-mark-for-mail-delete))))))
+
+;; (defun consult-mu-embark-refile (cand)
+;; "Mark message for delete"
+;; (let* ((msgid (get-text-property 0 :msgid cand))
+;;        (msg (consult-mu--get-message-by-id msgid))
+;;        (query (get-text-property 0 :query cand))
+;;         )
+;; (consult-mu-headers-goto-message-id msgid)
+;; (when-let ((buffer consult-mu-headers-buffer-name))
+;;     (with-current-buffer buffer
+;;       (display-buffer buffer)
+;;       (mu4e-headers-mark-for-refile)
+;;       (mu4e-mark-execute-all)
+;;       (mu4e~headers-update-handler msg t nil)
+;;       (consult-mu--update-headers query nil msgid)
+;;       ))))
 
 ;; (let ((msgid (get-text-property 0 :msgid cand)))
 ;;   (mu4e-view-message-with-message-id
@@ -80,9 +113,10 @@
 (defvar-keymap consult-mu-embark-general-actions-map
   :doc "Keymap for consult-mu-embark"
   :parent embark-general-map
-  "r" #'consult-mu-embark-refile
-  "t" #'consult-mu-embark-trash-message
-  )
+  "r" #'consult-mu-embark-mark-for-refile
+  "t" #'consult-mu-embark-mark-for-trash
+  "X" #'consult-mu-embark-mark-for-mail-delete
+)
 (add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
 
 

@@ -530,6 +530,15 @@ Put cursor on message with MSGID."
   (unless inhibit-read-only (setq inhibit-read-only t))
   )
 
+(defun consult-mu--execute-all-marks (&optional no-confirmation)
+  (interactive "P")
+  (when-let* ((buf (get-buffer consult-mu-headers-buffer-name)))
+    (with-current-buffer buf
+      (mu4e--mark-in-context
+       (let* ((marknum (mu4e-mark-marks-num)))
+         (unless (zerop marknum)
+           (mu4e-mark-execute-all no-confirmation)))))))
+
 ;; (defun consult-mu--view (msgid match-str mark-as-read)
 ;;   (consult-mu--update-view msgid mark-as-read)
 ;;   (with-current-buffer consult-mu-view-buffer-name
@@ -560,6 +569,31 @@ Put cursor on message with MSGID."
   ;; (switch-to-buffer buffer)
   ;; (delete-other-windows)
   )))
+
+(defun consult-mu--quit-header-buffer ()
+  (save-mark-and-excursion
+  (when-let* ((buf (get-buffer consult-mu-headers-buffer-name)))
+    (with-current-buffer buf
+      (if (eq major-mode 'mu4e-headers-mode)
+          (mu4e-mark-handle-when-leaving)
+        (quit-window t)
+        ;; clear the decks before going to the main-view
+        (mu4e--query-items-refresh 'reset-baseline)
+        )))))
+
+(defun consult-mu--quit-view-buffer ()
+  (when-let* ((buf (get-buffer consult-mu-view-buffer-name)))
+    (with-current-buffer buf
+      (if (eq major-mode 'mu4e-view-mode)
+          (mu4e-view-quit)
+        ))))
+
+(defun consult-mu--quit-main-buffer ()
+  (when-let* ((buf (get-buffer mu4e-main-buffer-name)))
+    (with-current-buffer buf
+      (if (eq major-mode 'mu4e-main-mode)
+          (mu4e-quit)
+        ))))
 
 (defun consult-mu--format-candidate (string input highlight)
   "Formats minibuffer candidates.
@@ -843,12 +877,11 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
 For more details on consult--async functionalities, see `consult-grep' and the official manual of consult, here: https://github.com/minad/consult.
 "
   (interactive)
-  (when (get-buffer consult-mu-view-buffer-name)
-  (kill-buffer (get-buffer consult-mu-view-buffer-name)))
-  (when (get-buffer consult-mu-headers-buffer-name)
-  (kill-buffer (get-buffer consult-mu-headers-buffer-name)))
-  (let((sel
-         (consult-mu--async "Search For:  " #'consult-mu--builder initial)
+  (save-mark-and-excursion
+  (consult-mu--execute-all-marks)
+  )
+  (let* ((sel
+        (consult-mu--async "Search For:  " #'consult-mu--builder initial)
          ))
     (if noaction
         sel

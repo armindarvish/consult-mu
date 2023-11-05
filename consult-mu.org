@@ -597,6 +597,17 @@ Put cursor on message with MSGID."
   )
 #+end_src
 
+******* execute-marks
+#+begin_src emacs-lisp
+(defun consult-mu--execute-all-marks (&optional no-confirmation)
+  (interactive "P")
+  (when-let* ((buf (get-buffer consult-mu-headers-buffer-name)))
+    (with-current-buffer buf
+      (mu4e--mark-in-context
+       (let* ((marknum (mu4e-mark-marks-num)))
+         (unless (zerop marknum)
+           (mu4e-mark-execute-all no-confirmation)))))))
+#+end_src
 ******* view-function
 #+begin_src emacs-lisp
 ;; (defun consult-mu--view (msgid match-str mark-as-read)
@@ -635,6 +646,39 @@ Put cursor on message with MSGID."
   ;; (delete-other-windows)
   )))
 #+end_src
+****** buffers
+******* quit header buffer
+#+begin_src emacs-lisp
+(defun consult-mu--quit-header-buffer ()
+  (save-mark-and-excursion
+  (when-let* ((buf (get-buffer consult-mu-headers-buffer-name)))
+    (with-current-buffer buf
+      (if (eq major-mode 'mu4e-headers-mode)
+          (mu4e-mark-handle-when-leaving)
+        (quit-window t)
+        ;; clear the decks before going to the main-view
+        (mu4e--query-items-refresh 'reset-baseline)
+        )))))
+#+end_src
+******* quit view buffer
+#+begin_src emacs-lisp
+(defun consult-mu--quit-view-buffer ()
+  (when-let* ((buf (get-buffer consult-mu-view-buffer-name)))
+    (with-current-buffer buf
+      (if (eq major-mode 'mu4e-view-mode)
+          (mu4e-view-quit)
+        ))))
+#+end_src
+******* quit main buffer
+#+begin_src emacs-lisp
+(defun consult-mu--quit-main-buffer ()
+  (when-let* ((buf (get-buffer mu4e-main-buffer-name)))
+    (with-current-buffer buf
+      (if (eq major-mode 'mu4e-main-mode)
+          (mu4e-quit)
+        ))))
+#+end_src
+
 ****** format candidate
 #+begin_src emacs-lisp
 (defun consult-mu--format-candidate (string input highlight)
@@ -949,12 +993,11 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
 For more details on consult--async functionalities, see `consult-grep' and the official manual of consult, here: https://github.com/minad/consult.
 "
   (interactive)
-  (when (get-buffer consult-mu-view-buffer-name)
-  (kill-buffer (get-buffer consult-mu-view-buffer-name)))
-  (when (get-buffer consult-mu-headers-buffer-name)
-  (kill-buffer (get-buffer consult-mu-headers-buffer-name)))
-  (let((sel
-         (consult-mu--async "Search For:  " #'consult-mu--builder initial)
+  (save-mark-and-excursion
+  (consult-mu--execute-all-marks)
+  )
+  (let* ((sel
+        (consult-mu--async "Search For:  " #'consult-mu--builder initial)
          ))
     (if noaction
         sel
@@ -1021,29 +1064,62 @@ This section includes additional useful embark actions as well as possible keyma
 
 (defun consult-mu-embark-mark-for-refile (cand)
 "Mark message for delete"
-(let* ((msgid (get-text-property 0 :msgid cand))
-        )
-(consult-mu-headers-goto-message-id msgid)
-(when-let ((buffer consult-mu-headers-buffer-name))
-    (with-current-buffer buffer
-      (display-buffer buffer)
-      (mu4e-view-mark-for-refile)))))
+(when-let* ((msgid (get-text-property 0 :msgid cand))
+            (buf (get-buffer consult-mu-headers-buffer-name))
+            )
+;;(consult-mu-headers-goto-message-id msgid)
+  (with-current-buffer buf
+    (goto-char (point-min))
+      (if (equal (mu4e-message-field-at-point :msgid) msgid)
+          (mu4e-headers-mark-for-refile)
+        (progn
+          (mu4e-headers-goto-message-id msgid)
+          (mu4e-headers-mark-for-refile))))))
 
-(defun consult-mu-embark-refile (cand)
+(defun consult-mu-embark-mark-for-trash (cand)
 "Mark message for delete"
-(let* ((msgid (get-text-property 0 :msgid cand))
-       (msg (consult-mu--get-message-by-id msgid))
-       (query (get-text-property 0 :query cand))
-        )
-(consult-mu-headers-goto-message-id msgid)
-(when-let ((buffer consult-mu-headers-buffer-name))
-    (with-current-buffer buffer
-      (display-buffer buffer)
-      (mu4e-headers-mark-for-refile)
-      (mu4e-mark-execute-all)
-      (mu4e~headers-update-handler msg t nil)
-      (consult-mu--update-headers query nil msgid)
-      ))))
+(when-let* ((msgid (get-text-property 0 :msgid cand))
+            (buf (get-buffer consult-mu-headers-buffer-name))
+            )
+;;(consult-mu-headers-goto-message-id msgid)
+  (with-current-buffer buf
+    (goto-char (point-min))
+      (if (equal (mu4e-message-field-at-point :msgid) msgid)
+          (mu4e-headers-mark-for-refile)
+        (progn
+          (mu4e-headers-goto-message-id msgid)
+          (mu4e-headers-mark-for-trash))))))
+
+
+(defun consult-mu-embark-mark-for-mail-delete (cand)
+"Mark message for delete"
+(when-let* ((msgid (get-text-property 0 :msgid cand))
+            (buf (get-buffer consult-mu-headers-buffer-name))
+            )
+;;(consult-mu-headers-goto-message-id msgid)
+  (with-current-buffer buf
+    (goto-char (point-min))
+      (if (equal (mu4e-message-field-at-point :msgid) msgid)
+          (mu4e-headers-mark-for-refile)
+        (progn
+          (mu4e-headers-goto-message-id msgid)
+          (mu4e-headers-mark-for-mail-delete))))))
+
+;; (defun consult-mu-embark-refile (cand)
+;; "Mark message for delete"
+;; (let* ((msgid (get-text-property 0 :msgid cand))
+;;        (msg (consult-mu--get-message-by-id msgid))
+;;        (query (get-text-property 0 :query cand))
+;;         )
+;; (consult-mu-headers-goto-message-id msgid)
+;; (when-let ((buffer consult-mu-headers-buffer-name))
+;;     (with-current-buffer buffer
+;;       (display-buffer buffer)
+;;       (mu4e-headers-mark-for-refile)
+;;       (mu4e-mark-execute-all)
+;;       (mu4e~headers-update-handler msg t nil)
+;;       (consult-mu--update-headers query nil msgid)
+;;       ))))
 
 ;; (let ((msgid (get-text-property 0 :msgid cand)))
 ;;   (mu4e-view-message-with-message-id
@@ -1067,9 +1143,10 @@ This section includes additional useful embark actions as well as possible keyma
 (defvar-keymap consult-mu-embark-general-actions-map
   :doc "Keymap for consult-mu-embark"
   :parent embark-general-map
-  "r" #'consult-mu-embark-refile
-  "t" #'consult-mu-embark-trash-message
-  )
+  "r" #'consult-mu-embark-mark-for-refile
+  "t" #'consult-mu-embark-mark-for-trash
+  "X" #'consult-mu-embark-mark-for-mail-delete
+)
 (add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
 
 
@@ -1089,5 +1166,3 @@ This section includes additional useful embark actions as well as possible keyma
 
 (provide 'consult-mu-embark)
 #+end_src
-
-
