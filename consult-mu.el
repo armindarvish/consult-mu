@@ -57,15 +57,40 @@ Can be either a string, or a list of strings or expressions."
                 (const :to)
                 (const :list)))
 
+(defcustom consult-mu-headers-fields mu4e-headers-fields
+  "A list of header fields to show in the headers buffer.
+Each element has the form (HEADER . WIDTH), where HEADER is one of
+the available headers (see `mu4e-header-info') and WIDTH is the
+respective width in characters.
+
+A width of nil means \"unrestricted\", and this is best reserved
+for the rightmost (last) field. Note that emacs may become very
+slow with excessively long lines (1000s of characters), so if you
+regularly get such messages, you want to avoid fields with nil
+altogether."
+  :group 'consult-mu
+  :type `(repeat (cons (choice ,@(mapcar (lambda (h)
+                                           (list 'const :tag
+                                                 (plist-get (cdr h) :help)
+                                                 (car h)))
+                                         mu4e-header-info))
+                       (choice (integer :tag "width")
+                               (const :tag "unrestricted width" nil)))))
+
+(defcustom consult-mu-headers-string nil
+  "A string to format headers"
+  :group 'consult-mu
+  :type 'string)
+
 (defcustom consult-mu-search-sort-direction mu4e-search-sort-direction
   "Direction to sort by; a symbol
  `descending' (sorting
   Z->A)
 or
 `ascending' (sorting A->Z)."
+  :group 'consult-mu
   :type '(radio (const ascending)
-                (const descending))
-  :group 'consult-mu)
+                (const descending)))
 
 (defcustom consult-mu-group-by :date
   "What field to sort results by "
@@ -289,11 +314,77 @@ if IGNORE-CASE is non-nil.
 
 (defun consult-mu--format-date (string)
   (let ((string (replace-regexp-in-string " " "0" string)))
-  (format "%s %s %s"
-          (substring string 0 10)
-          (substring string -4 nil)
-          (substring string 11 -4)
-          )))
+    (format "%s %s %s"
+            (substring string 0 10)
+            (substring string -4 nil)
+            (substring string 11 -4)
+            )))
+
+(defun consult-mu--expand-headers-string (msg string)
+  (cl-loop with str = nil
+           for c in (string-split string "%" t)
+           concat (concat (pcase  (substring c 0 1)
+                            ("f" (let ((sender (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :from) ";"))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if sender
+                                     (propertize (if (> length 0) (consult-mu--set-string-width sender length) sender) 'face 'consult-mu-sender-face))))
+                            ("t" (let ((receiver (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :to) ";"))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if receiver
+                                     (propertize (if (> length 0) (consult-mu--set-string-width receiver length) receiver) 'face 'consult-mu-sender-face))))
+                            ("s" (let ((subject (plist-get msg :subject))
+                                        (length (string-to-number (substring c 1 nil))))
+                                   (if subject
+                                     (propertize (if (> length 0) (consult-mu--set-string-width subject length) subject) 'face 'consult-mu-subject-face))))
+                            ("d" (let ((date (format-time-string "%a %d %b %y" (plist-get msg :date)))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if date
+                                     (propertize (if (> length 0) (consult-mu--set-string-width date length) date) 'face 'consult-mu-date-face))))
+
+                            ("p" (let ((priority (plist-get msg :priority))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if priority
+                                       (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" priority) length) (format "%s" priority)) 'face 'consult-mu-size-face))))
+                            ("z" (let ((size (file-size-human-readable (plist-get msg :size)))
+                                       (length (string-to-number (substring c 1 nil))))
+                                        (if size
+                                            (propertize (if (> length 0) (consult-mu--set-string-width size length) size)  'face 'consult-mu-size-face))))
+                            ("i" (let ((id (plist-get msg :message-id))
+                                       (length (string-to-number (substring c 1 nil))))
+                                  (if id
+                                     (propertize (if (> length 0) (consult-mu--set-string-width id length) id) 'face 'consult-mu-default-face))))
+
+                            ("g" (let ((flags  (plist-get msg :flags))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if flags
+                                     (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" flags) length) (format "%s" flags)) 'face 'consult-mu-flags-face))))
+
+                            ("G" (let ((flags (plist-get msg :flags))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if flags
+                                     (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" (mu4e~headers-flags-str flags)) length) (format "%s" (mu4e~headers-flags-str flags))) 'face 'consult-mu-flags-face))))
+
+                            ("x" (let ((tags (plist-get msg :tags))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if tags
+                                     (propertize (if (> length 0) (consult-mu--set-string-width tags length) tags) 'face 'consult-mu-tags-face) nil)))
+
+                            ("c" (let ((cc (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :cc) ";"))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if cc
+                                     (propertize (if (> length 0) (consult-mu--set-string-width cc length) cc) 'face 'consult-mu-tags-face))))
+
+                            ("h" (let ((bcc (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :bcc) ";"))
+                                       (length (string-to-number (substring c 1 nil))))
+                             (if bcc
+                                     (propertize (if (> length 0) (consult-mu--set-string-width bcc length) bcc) 'face 'consult-mu-tags-face))))
+
+                            ("r" (let ((changed (format-time-string "%a %d %b %y" (plist-get msg :changed)))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if changed
+                                     (propertize (if (> length 0) (consult-mu--set-string-width changed length) changed) 'face 'consult-mu-tags-face))))
+                            (_ nil)
+                            ) "  ")))
 
 (defun consult-mu-flags-to-string (FLAG)
   (cl-loop for c across FLAG
@@ -472,6 +563,7 @@ Put cursor on message with MSGID."
            (expr (car (consult--command-split query)))
            (rewritten-expr (funcall mu4e-query-rewrite-function expr))
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
+           (mu4e-headers-fields consult-mu-headers-fields)
            )
       (with-current-buffer buf
         (save-excursion
@@ -631,24 +723,11 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (info (cadr cand))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (msgid (plist-get msg :message-id))
-         (subject (plist-get msg :subject))
-         (sender (plist-get msg :to))
-         (receiver (plist-get msg :to))
-         (date (format-time-string "%a %d %b %y" (plist-get msg :date)))
-         (datetime (format-time-string "%F %r" (plist-get msg :date)))
-         (time (format-time-string "%X" (plist-get msg :date)))
-         (year (format-time-string "%Y" (plist-get msg :date)))
-         (month (format-time-string "%B" (plist-get msg :date)))
-         (day (format-time-string "%A" (plist-get msg :date)))
-         (week (format-time-string "%V" (plist-get msg :date)))
-         (size (plist-get msg :size))
-         (size (file-size-human-readable size))
-         (flags (or (plist-get msg :flags) nil))
-         (tags (or (plist-get msg :tags) nil))
          (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
-         (str string)
-         )
+         (str (if consult-mu-headers-string
+                 (consult-mu--expand-headers-string msg consult-mu-headers-string)
+                  string)
+         ))
          (if (and consult-mu-highlight-matches highlight)
                      (cond
                       ((listp match-str)
@@ -656,7 +735,9 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                       ((stringp match-str)
                        (setq str (consult-mu--highlight-match match-str str t))))
                    str)
-    (cons (propertize str :msg msg :query query :datetime datetime :date date :year year :month month :day day :week week :time time :msgid msgid :subject subject :from sender :to receiver :size size :tags tags) `(:msg ,msg :query ,query :datetime ,datetime :date ,date :year ,year :month ,month :day ,day :week ,week :time ,time :msgid ,msgid :subject ,subject :from ,sender :to ,receiver :size ,size :tags tags))
+
+    ;; (cons (propertize str :msg msg :query query :datetime datetime :date date :year year :month month :day day :week week :time time :msgid msgid :subject subject :from sender :to receiver :size size :tags tags) `(:msg ,msg :query ,query :datetime ,datetime :date ,date :year ,year :month ,month :day ,day :week ,week :time ,time :msgid ,msgid :subject ,subject :from ,sender :to ,receiver :size ,size :tags tags))
+    (cons (propertize str :msg msg :query query) `(:msg ,msg :query ,query))
     ;; (print (format "%s" query))
     ;;(list str info)
     ))
@@ -673,7 +754,7 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
            )
       ;;`(,title ,info)
       ;;(car cands)
-      (cons sel info)
+      msg
       ;;(type-of date)
       )))
 
@@ -704,7 +785,24 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
         ))))
 
 (defun consult-mu--group-name (cand)
-(get-text-property 0 (if (not (keywordp consult-mu-group-by)) (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by) cand))
+(if consult-mu-group-by
+(let ((msg (get-text-property 0 :msg cand))
+      (field (if (not (keywordp consult-mu-group-by)) (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by)))
+      (pcase field
+        (:date (format-time-string "%a %d %b %y" (plist-get msg field)))
+        (:from (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+        (:to (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+        (:changed (format-time-string "%a %d %b %y" (plist-get msg field)))
+        (:datetime (format-time-string "%F %r" (plist-get msg :date)))
+        (:time (format-time-string "%X" (plist-get msg :date)))
+        (:year (format-time-string "%Y" (plist-get msg :date)))
+        (:month (format-time-string "%B" (plist-get msg :date)))
+        (:day-of-week (format-time-string "%A" (plist-get msg :date)))
+        (:week (format-time-string "%V" (plist-get msg :date)))
+        (:size (file-size-human-readable (plist-get msg field)))
+        (:flags (format "%s" (plist-get msg field)))
+        (:tags (format "%s" (plist-get msg field)))
+        (_ (format "%s" (plist-get msg field)))))))
 
 (defun consult-mu--group (cand transform)
   "Group candidates in minibuffer for consult-mu.
@@ -881,13 +979,12 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
 
 (defun consult-mu--dynamic-collection (input)
     ;; Somehow generate candidates, e.g., via org-ql
-    (consult-mu--update-headers input nil nil)
+  (consult-mu--update-headers input nil nil)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
       (cl-loop until (eobp)
-               when (ignore-errors (mu4e-message-at-point))
-               collect (let ((msg (ignore-errors (mu4e-message-at-point)))
+               collect (when-let ((msg (ignore-errors (mu4e-message-at-point)))
                              (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split input))) nil)))
                                                                     (consult-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                  do (forward-line 1)))
@@ -910,7 +1007,7 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
    :lookup (consult-mu--lookup)
    ;;:state (funcall #'consult-mu--state)
    :initial (consult--async-split-initial initial)
-   :group #'consult-mu--group
+   :group (if consult-mu-group-by #'consult-mu--group nil)
    :add-history (list (consult--async-split-thingatpt 'symbol))
    :history '(:input consult-mu--history)
    :require-match t
