@@ -231,15 +231,18 @@ This section includes functions that make calls to =gh= in the shell or provide 
 
 *** Utility (formatting, conversion, etc.)
 **** formatting strings
+***** non-utf cleanup
 #+begin_src emacs-lisp
 ;;; Utility functions
-
 (defun consult-mu--nonutf-cleanup (string)
 "Remove non UTF-8 characters if any in the string."
   (string-join
    (delq nil (mapcar (lambda (ch) (encode-coding-char ch 'utf-8 'unicode))
                      string))))
 
+#+end_src
+***** fix string length
+#+begin_src emacs-lisp
 (defun consult-mu--set-string-width (string width &optional prepend)
   "Sets the STRING width to a fixed value, WIDTH.
 If the String is longer than WIDTH, it truncates the string and add an ellipsis, \"...\". If the string is shorter it adds whitespace to the string.
@@ -256,27 +259,6 @@ If PREPEND is non-nil, it truncates or adds whitespace from the beginning of str
         (setq string (format "%s..." (substring string 0 (- width (+ w 3)))))))
     string))
 
-;; (defun consult-mu--justify-left (string prefix maxwidth)
-;;   "Sets the width of  STRING+PREFIX justified from left.
-;; It uses `consult-mu--set-string-width' and sets the width of the concatenate of STRING+PREFIX (e.g. `(concat prefix string)`) within MAXWIDTH. This is used for aligning marginalia info in minibuffer when using `consult-mu'."
-;;   (let ((s (string-width string))
-;;         (w (string-width prefix)))
-;;     (cond ((< (+ s w) (floor (/ maxwidth 2)))
-;;            (consult-mu--set-string-width string (- (floor (/ maxwidth 2))  w) t))
-;;           ((< (+ s w) (floor (/ maxwidth 1.8)))
-;;            (consult-mu--set-string-width string (- (floor (/ maxwidth 1.8))  w) t))
-;;           ((< (+ s w) (floor (/ maxwidth 1.6)))
-;;            (consult-mu--set-string-width string (- (floor (/ maxwidth 1.6))  w) t))
-;;           ((< (+ s w) (floor (/ maxwidth 1.4)))
-;;            (consult-mu--set-string-width string (- (floor (/ maxwidth 1.4)) w) t))
-;;           ((< (+ s w) (floor (/ maxwidth 1.2)))
-;;            (consult-mu--set-string-width string (- (floor (/ maxwidth 1.2)) w) t))
-;;           ((< (+ s w) maxwidth)
-;;            (consult-mu--set-string-width string (- maxwidth w) t))
-;;           (t string)
-;;           )
-;;     ))
-
 (defun consult-mu--justify-left (string prefix maxwidth)
   "Sets the width of  STRING+PREFIX justified from left.
 It uses `consult-mu--set-string-width' and sets the width of the concatenate of STRING+PREFIX (e.g. `(concat prefix string)`) within MAXWIDTH. This is used for aligning marginalia info in minibuffer when using `consult-mu'."
@@ -288,6 +270,9 @@ It uses `consult-mu--set-string-width' and sets the width of the concatenate of 
           )
     ))
 
+#+end_src
+***** highlight match with text-properties
+#+begin_src emacs-lisp
 (defun consult-mu--highlight-match (regexp str ignore-case)
   "Highlights REGEXP in STR.
 If a regular expression contains capturing groups, only these are highlighted.
@@ -308,7 +293,9 @@ if IGNORE-CASE is non-nil.
             )
           (setq m (cddr m))))))
   str)
-
+#+end_src
+***** highlight match with overlay
+#+begin_src emacs-lisp
 (defun consult-mu--overlay-match (match-str buffer ignore-case)
 (with-current-buffer (or (get-buffer buffer) (current-buffer))
   (remove-overlays (point-min) (point-max) 'consult-mu-overlay t)
@@ -336,6 +323,14 @@ if IGNORE-CASE is non-nil.
          (overlay-put o 'face 'consult-mu-highlight-match-face))
       )
 ))))
+#+end_src
+***** format candidate string
+#+begin_src emacs-lisp
+(defun consult-mu-format-candidate-string (string)
+  (pcase string
+    "%d" 'date
+  ))
+
 #+end_src
 **** format date
 #+begin_src emacs-lisp
@@ -545,7 +540,7 @@ Update `consult-mu-headers-buffer-name' but do not switch to buffer.
 If IGNORE-HISTORY is true, do *not* update the query history stack, `mu4e--search-query-past'.
 
 Put cursor on message with MSGID."
-  (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
+(cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
            (inhibit-read-only t)
@@ -587,7 +582,9 @@ Put cursor on message with MSGID."
                      (equal (buffer-substring (point-min) (+ (point-min) (length mu4e~search-message))) mu4e~search-message)
                      (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results)))
                      )
-            (sleep-for 0.02)))
+            (sleep-for 0.001)
+            )
+          )
         )))
   (unless inhibit-read-only (setq inhibit-read-only t))
   )
@@ -722,46 +719,46 @@ Put cursor on message with MSGID."
 
 ****** format candidate
 #+begin_src emacs-lisp
-(defun consult-mu--format-candidate (string input highlight)
+(defun consult-mu--format-candidate (cand highlight)
   "Formats minibuffer candidates.
 
 INPUT is the query from the user.
 
 if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
 
-  (let* ((parts (string-split string consult-mu-delimiter))
-         (msgid (car parts))
-         (datetime (consult-mu--format-date (cadr parts)))
-         (date (substring datetime 0 15))
-         (time (substring datetime 16 nil))
-         (sender (cadr (cdr parts)))
-         (receiver (cadr (cdr (cdr parts))))
-         (subject (cadr (cdr (cdr (cdr parts)))))
-         (size (cadr (cdr (cdr (cdr (cdr parts))))))
-         (size (file-size-human-readable (string-to-number size)))
-         (flags (consult-mu-flags-to-string (cadr (cdr (cdr (cdr (cdr (cdr parts))))))))
-         (flags (if (listp flags) (string-join flags " ")))
-         (tags (cadr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))
-         (query input)
-         (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
-         (str (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
-                      (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.6))) 'face 'consult-mu-subject-face)
-                      (propertize sender 'face 'consult-mu-sender-face)
-                      (propertize (consult-mu--format-date date) 'face 'consult-mu-date-face)
-                      (propertize size 'face 'consult-mu-size-face)
-                      (propertize flags 'face 'consult-mu-flags-face)
-                      (propertize tags 'face 'consult-mu-tags-face)
-                      ))
-         (str (propertize str :msgid msgid :subject subject :from sender :to receiver :size size :datetime datetime :date date :time time :flags flags :tags tags :query query))
+  (let* ((string (car cand))
+         (info (cadr cand))
+         (msg (plist-get info :msg))
+         (query (plist-get info :query))
+         (msgid (plist-get msg :message-id))
+         (subject (plist-get msg :subject))
+         (sender (plist-get msg :to))
+         (receiver (plist-get msg :to))
+         (date (format-time-string "%a %d %b %y" (plist-get msg :date)))
+         (datetime (format-time-string "%F %r" (plist-get msg :date)))
+         (time (format-time-string "%X" (plist-get msg :date)))
+         (year (format-time-string "%Y" (plist-get msg :date)))
+         (month (format-time-string "%B" (plist-get msg :date)))
+         (day (format-time-string "%A" (plist-get msg :date)))
+         (week (format-time-string "%V" (plist-get msg :date)))
+         (size (plist-get msg :size))
+         (size (file-size-human-readable size))
+         (flags (or (plist-get msg :flags) nil))
+         (tags (or (plist-get msg :tags) nil))
+         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (str string)
          )
-    (if (and consult-mu-highlight-matches highlight)
-        (cond
-         ((listp match-str)
-          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
-         ((stringp match-str)
-          (setq str (consult-mu--highlight-match match-str str t))))
-      str)
-    (cons str (list :msgid msgid :subject subject :from sender :to receiver :size size :datetime datetime :date date :time time :flags flags :tags tags :query query))))
+         (if (and consult-mu-highlight-matches highlight)
+                     (cond
+                      ((listp match-str)
+                       (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+                      ((stringp match-str)
+                       (setq str (consult-mu--highlight-match match-str str t))))
+                   str)
+    (cons (propertize str :msg msg :query query :datetime datetime :date date :year year :month month :day day :week week :time time :msgid msgid :subject subject :from sender :to receiver :size size :tags tags) `(:msg ,msg :query ,query :datetime ,datetime :date ,date :year ,year :month ,month :day ,day :week ,week :time ,time :msgid ,msgid :subject ,subject :from ,sender :to ,receiver :size ,size :tags tags))
+    ;; (print (format "%s" query))
+    ;;(list str info)
+    ))
 #+end_src
 
 ****** lookup
@@ -771,8 +768,16 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
 This is passed as LOOKUP to `consult--read' on candidates and is used to format the output when a candidate is selected."
   (lambda (sel cands &rest args)
     (let* ((info (cdr (assoc sel cands)))
-           (msgid (plist-get info :msgid)))
-    (cons (format "%s" msgid) info))))
+           (msg  (plist-get info :msg))
+           (date (plist-get msg :date))
+           ;;(title (plist-get (plist-get (car info) :msg) :subject))
+           ;;(title (plist-get (car info) :subject))
+           )
+      ;;`(,title ,info)
+      ;;(car cands)
+      (cons sel info)
+      ;;(type-of date)
+      )))
 #+end_src
 
 ****** state/preview
@@ -846,13 +851,14 @@ This is a wrapper function around `consult-mu--view'. It parses CAND to extract 
 
 To use this as the default action for consult-mu, set `consult-mu-default-action' to #'consult-mu--view-action."
 
-  (let* ((info (cdr cand))
-         (msgid (substring-no-properties (plist-get info :msgid)))
-         (query (substring-no-properties (plist-get info :query)))
-         (match-str (car (consult--command-split query)))
+  (let* ((info (cadr cand))
+         ;;(msgid (substring-no-properties (plist-get info :message-id)))
+         ;;(query (substring-no-properties (plist-get info :query)))
+         ;;(match-str (car (consult--command-split query)))
          )
-    (consult-mu--view msgid t consult-mu-mark-viewed-as-read match-str)
-    (consult-mu-overlays-toggle consult-mu-view-buffer-name)
+    (print (format "%s" info))
+    ;;(consult-mu--view msgid t consult-mu-mark-viewed-as-read match-str)
+    ;;(consult-mu-overlays-toggle consult-mu-view-buffer-name)
     ))
 #+end_src
 
@@ -992,9 +998,31 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
 #+end_src
 
 
+****** get candidates
+#+begin_src emacs-lisp
+(defun consult-mu-get-candidates (input)
+(let ((msg (ignore-errors (mu4e-message-at-point))))
+  `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input))))
+#+end_src
+****** dynamic collection
+#+begin_src emacs-lisp
+(defun consult-mu--dynamic-collection (input)
+    ;; Somehow generate candidates, e.g., via org-ql
+    (consult-mu--update-headers input nil nil)
+    (with-current-buffer consult-mu-headers-buffer-name
+      (goto-char (point-min))
+      (remove nil
+      (cl-loop until (eobp)
+               when (ignore-errors (mu4e-message-at-point))
+               collect (let ((msg (ignore-errors (mu4e-message-at-point)))
+                             (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split input))) nil)))
+                                                                    (consult-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+                 do (forward-line 1)))
+        ))
+#+end_src
 ****** internal async command
 #+begin_src emacs-lisp
-(defun consult-mu--async (prompt builder &optional initial)
+(defun consult-mu--async (prompt collection &optional initial)
 "Query mu4e messages asynchronously.
 
 This is a non-interactive internal function. For the interactive version see `consult-mu'.
@@ -1006,12 +1034,10 @@ BUILDER is an async builder function passed to `consult--async-command'.
 INITIAL is an optional arg for the initial input in the minibuffer. (passed as INITITAL to `consult--read'.)
 "
   (consult--read
-   (consult--async-command builder
-     (consult-mu--transform builder)
-     )
+   (consult--dynamic-collection collection)
    :prompt prompt
    :lookup (consult-mu--lookup)
-   :state (funcall #'consult-mu--state)
+   ;;:state (funcall #'consult-mu--state)
    :initial (consult--async-split-initial initial)
    :group #'consult-mu--group
    :add-history (list (consult--async-split-thingatpt 'symbol))
@@ -1048,7 +1074,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
   (consult-mu--execute-all-marks)
   )
   (let* ((sel
-        (consult-mu--async "Search For:  " #'consult-mu--builder initial)
+        (consult-mu--async "Search For:  " #'consult-mu--dynamic-collection initial)
          ))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
