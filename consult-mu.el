@@ -190,8 +190,8 @@ By default inherits from `font-lock-type-face'.")
   "tags/comments face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-comment-face'.")
 
-(defface consult-mu-flag-face
-  `((t :inherit 'font-lock-funciton-call-face))
+(defface consult-mu-flags-face
+  `((t :inherit 'font-lock-function-call-face))
   "tags/comments face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-comment-face'.")
 
@@ -311,6 +311,25 @@ if IGNORE-CASE is non-nil.
           (substring string -4 nil)
           (substring string 11 -4)
           )))
+
+(defun consult-mu-flags-to-string (FLAG)
+  (cl-loop for c across FLAG
+           collect
+           (pcase (string c)
+             ("D" "draft")
+             ("F" "flagged")
+             ("N" "new")
+             ("P" "forwarded")
+             ("R"  "replied")
+             ("S" "read")
+             ("T" "trashed")
+             ("a" "attachment")
+             ("x" "encrrypted")
+             ("s" "signed")
+             ("u" "unread")
+             ("l" "list")
+             ("q" "personal")
+             (_ ""))))
 
 ;;; Backend `mu` related functions
 
@@ -632,7 +651,8 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (subject (cadr (cdr (cdr (cdr parts)))))
          (size (cadr (cdr (cdr (cdr (cdr parts))))))
          (size (file-size-human-readable (string-to-number size)))
-         (flags (cadr (cdr (cdr (cdr (cdr (cdr parts)))))))
+         (flags (consult-mu-flags-to-string (cadr (cdr (cdr (cdr (cdr (cdr parts))))))))
+         (flags (if (listp flags) (string-join flags " ")))
          (tags (cadr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))
          (query input)
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
@@ -641,7 +661,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                       (propertize sender 'face 'consult-mu-sender-face)
                       (propertize (consult-mu--format-date date) 'face 'consult-mu-date-face)
                       (propertize size 'face 'consult-mu-size-face)
-                      (propertize flags 'face 'consult-mu-tags-face)
+                      (propertize flags 'face 'consult-mu-flags-face)
                       (propertize tags 'face 'consult-mu-tags-face)
                       ))
          (str (propertize str :msgid msgid :subject subject :from sender :to receiver :size size :datetime datetime :date date :time time :flags flags :tags tags :query query))
