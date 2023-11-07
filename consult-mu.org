@@ -84,10 +84,16 @@ or
                 (const descending))
   :group 'consult-mu)
 
-(defcustom consult-mu-group-by 'date
+(defcustom consult-mu-group-by :date
   "What field to sort results by "
   :group 'consult-mu
-  :type 'symbol)
+  :type '(radio (const :date)
+                (const :subject)
+                (const :from)
+                (const :to)
+                (const :time)
+                (const :datetime)
+                ))
 
 (defcustom consult-mu-mark-previewed-as-read nil
   "What field to sort results by "
@@ -180,12 +186,12 @@ By default inherits from `default'.")
 By default inherits from `font-lock-type-face'.")
 
 (defface consult-mu-sender-face
-  `((t :inherit 'font-lock-constant-face))
+  `((t :inherit 'font-lock-variable-name-face))
   "Contact face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-constant-face'.")
 
 (defface consult-mu-receiver-face
-  `((t :inherit 'font-lock-constant-face))
+  `((t :inherit 'font-lock-variable-name-face))
   "Contact face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-constant-face'.")
 
@@ -195,12 +201,22 @@ By default inherits from `font-lock-constant-face'.")
 By default inherits from `font-lock-keyword-face'.")
 
 (defface consult-mu-count-face
-  `((t :inherit 'font-lock-type-face))
+  `((t :inherit 'font-lock-string-face))
+  "Count face in `consult-mu''s minibuffer annotations.
+By default inherits from `font-lock-type-face'.")
+
+(defface consult-mu-size-face
+  `((t :inherit 'font-lock-string-face))
   "Count face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-type-face'.")
 
 (defface consult-mu-tags-face
   `((t :inherit 'font-lock-comment-face))
+  "tags/comments face in `consult-mu''s minibuffer annotations.
+By default inherits from `font-lock-comment-face'.")
+
+(defface consult-mu-flag-face
+  `((t :inherit 'font-lock-constant-face))
   "tags/comments face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-comment-face'.")
 
@@ -603,10 +619,14 @@ Put cursor on message with MSGID."
   (interactive "P")
   (when-let* ((buf (get-buffer consult-mu-headers-buffer-name)))
     (with-current-buffer buf
+      (pop-to-buffer buf)
+      (unless (one-window-p) (delete-other-windows))
       (mu4e--mark-in-context
        (let* ((marknum (mu4e-mark-marks-num)))
          (unless (zerop marknum)
-           (mu4e-mark-execute-all no-confirmation)))))))
+           (mu4e-mark-execute-all no-confirmation))))
+      (quit-window)))
+  )
 #+end_src
 ******* view-function
 #+begin_src emacs-lisp
@@ -694,14 +714,23 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (date (substring datetime 0 15))
          (time (substring datetime 16 nil))
          (sender (cadr (cdr parts)))
-         (subject (cadr (cdr (cdr parts))))
+         (receiver (cadr (cdr (cdr parts))))
+         (subject (cadr (cdr (cdr (cdr parts)))))
+         (size (cadr (cdr (cdr (cdr (cdr parts))))))
+         (size (file-size-human-readable (string-to-number size)))
+         (flags (cadr (cdr (cdr (cdr (cdr (cdr parts)))))))
+         (tags (cadr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))
          (query input)
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
-         (str (format "%s\s\s%s\s\s%s"
+         (str (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
                       (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.6))) 'face 'consult-mu-subject-face)
                       (propertize sender 'face 'consult-mu-sender-face)
-                      (propertize (consult-mu--format-date date) 'face 'consult-mu-date-face)))
-         (str (propertize str :msgid msgid :subject subject :sender sender :datetime datetime :date date :time time :query query))
+                      (propertize (consult-mu--format-date date) 'face 'consult-mu-date-face)
+                      (propertize size 'face 'consult-mu-size-face)
+                      (propertize flags 'face 'consult-mu-tags-face)
+                      (propertize tags 'face 'consult-mu-tags-face)
+                      ))
+         (str (propertize str :msgid msgid :subject subject :from sender :to receiver :size size :datetime datetime :date date :time time :flags flags :tags tags :query query))
          )
     (if (and consult-mu-highlight-matches highlight)
         (cond
@@ -710,7 +739,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          ((stringp match-str)
           (setq str (consult-mu--highlight-match match-str str t))))
       str)
-    (cons str (list :msgid msgid :subject subject :sender sender :datetime datetime :date date :time time :query query))))
+    (cons str (list :msgid msgid :subject subject :from sender :to receiver :size size :datetime datetime :date date :time time :flags flags :tags tags :query query))))
 #+end_src
 
 ****** lookup
@@ -762,7 +791,7 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
 (defun consult-mu--group (cand transform)
   "Group candidates in minibuffer for consult-mu.
 This is passed as GROUP to `consult--read' and is used to group emails by date."
-  (let ((name (consult-mu--group-name cand)))
+  (when-let ((name (consult-mu--group-name cand)))
     (if transform (substring cand) name)
     ))
 #+end_src
@@ -913,8 +942,8 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
                (skip-dups (or (member "-u" flags) (member "--skip-dups" flags) mu4e-search-skip-duplicates))
                (include-related (or (member "-r" flags) (member "--include-related" flags) mu4e-search-include-related)))
     (setq opts (append opts (list "--nocolor")))
-    (setq opts (append opts (list "--fields" (format "i%sd%sf%ss"
-                                                     consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
+    (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx"
+                                                     consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
     (unless (or (member "-s" flags) (member "--sortfiled" flags))
     (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
     (if threads (setq opts (append opts (list "--thread"))))
