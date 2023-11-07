@@ -156,7 +156,7 @@ By default inherits from `consult-highlight-match'. "
 By default inherits from `default'.")
 
 (defface consult-mu-subject-face
-  `((t :inherit 'font-lock-type-face))
+  `((t :inherit 'font-lock-keyword-face))
   "Subject face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-type-face'.")
 
@@ -171,7 +171,7 @@ By default inherits from `font-lock-constant-face'.")
 By default inherits from `font-lock-constant-face'.")
 
 (defface consult-mu-date-face
-  `((t :inherit 'font-lock-keyword-face))
+  `((t :inherit 'font-lock-preprocessor-face))
   "date face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-keyword-face'.")
 
@@ -191,7 +191,7 @@ By default inherits from `font-lock-type-face'.")
 By default inherits from `font-lock-comment-face'.")
 
 (defface consult-mu-flag-face
-  `((t :inherit 'font-lock-constant-face))
+  `((t :inherit 'font-lock-funciton-call-face))
   "tags/comments face in `consult-mu''s minibuffer annotations.
 By default inherits from `font-lock-comment-face'.")
 
