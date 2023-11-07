@@ -366,6 +366,7 @@ if IGNORE-CASE is non-nil.
              ("u" "unread")
              ("l" "list")
              ("q" "personal")
+             ("c" "calendar")
              (_ ""))))
 #+end_src
 *** Calls to =mu=

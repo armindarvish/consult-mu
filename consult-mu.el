@@ -329,6 +329,7 @@ if IGNORE-CASE is non-nil.
              ("u" "unread")
              ("l" "list")
              ("q" "personal")
+             ("c" "calendar")
              (_ ""))))
 
 ;;; Backend `mu` related functions
