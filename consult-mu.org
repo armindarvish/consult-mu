@@ -1077,11 +1077,10 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (str (if consult-mu-headers-string
                  (consult-mu--expand-headers-string msg consult-mu-headers-string)
                   (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
-                          (propertize (format-time-string "%X" date) 'face 'consult-mu-date-face)
-                          (propertize sender 'face 'consult-mu-sender-face)
-                      (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.6))) 'face 'consult-mu-subject-face)
-
-
+                          (propertize (consult-mu--set-string-width
+                                       (format-time-string "%x" date) 10) 'face 'consult-mu-date-face)
+                          (propertize (consult-mu--set-string-width (consult-mu--contact-name-or-email sender) (floor (* (frame-width) 0.2)))  'face 'consult-mu-sender-face)
+                      (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.55))) 'face 'consult-mu-subject-face)
                       (propertize (file-size-human-readable size) 'face 'consult-mu-size-face)
                       (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
                       (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face)
