@@ -183,6 +183,9 @@ or
   "Delimiter for fields in mu output.
 Taken from  https://github.com/seanfarley/counsel-mu.")
 
+(defvar consult-mu-saved-searches (list)
+  "List of Favorite searches.")
+
 #+end_src
 
 ** Define faces
@@ -677,7 +680,7 @@ Put cursor on message with MSGID."
                      (equal (buffer-substring (point-min) (+ (point-min) (length mu4e~search-message))) mu4e~search-message)
                      (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results)))
                      )
-            (sleep-for 0.001)
+            (sleep-for 0.005)
             )
           )
         )))
@@ -738,7 +741,8 @@ Put cursor on message with MSGID."
        (let* ((marknum (mu4e-mark-marks-num)))
          (unless (zerop marknum)
            (mu4e-mark-execute-all no-confirmation))))
-      (quit-window)))
+      (quit-window)
+      ))
   )
 #+end_src
 ******* view-function
@@ -853,15 +857,12 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
   (lambda (sel cands &rest args)
     (let* ((info (cdr (assoc sel cands)))
            (msg  (plist-get info :msg))
-           (date (plist-get msg :date))
+           (subject (plist-get msg :subject))
            ;;(title (plist-get (plist-get (car info) :msg) :subject))
            ;;(title (plist-get (car info) :subject))
            )
-      ;;`(,title ,info)
-      ;;(car cands)
-      msg
-      ;;(type-of date)
-      )))
+      (cons subject info
+      ))))
 #+end_src
 
 ****** state/preview
@@ -869,29 +870,32 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
 #+begin_src emacs-lisp
 (defun consult-mu--state ()
   "State function for consult-mu candidates.
-
 This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
   (lambda (action cand)
-     (let ((preview (consult--buffer-preview)))
+    (let ((preview (consult--buffer-preview)))
       (pcase action
         ('preview
          (if cand
-             (when-let* ((msgid (plist-get (cdr cand) :msgid))
-                        (query (plist-get (cdr cand) :query))
-                        (match-str (car (consult--command-split query)))
-                        (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
-                        (buffer consult-mu-view-buffer-name))
+             (when-let* ((info (cdr cand))
+                         (msg (plist-get info :msg))
+                         (query (plist-get info :query))
+                         (msgid (substring-no-properties (plist-get msg :message-id)))
+                         (match-str (car (consult--command-split query)))
+                         (match-str (car (consult--command-split query)))
+                         (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+                         (buffer consult-mu-view-buffer-name))
                ;;(get-buffer-create consult-mu-view-buffer-name)
                (add-to-list 'consult-mu--view-buffers-list buffer)
                (funcall preview action
-                       (consult-mu--view msgid nil consult-mu-mark-previewed-as-read match-str)
+                        (consult-mu--view msgid nil consult-mu-mark-previewed-as-read match-str)
                         )
                (with-current-buffer consult-mu-view-buffer-name
                  (unless (one-window-p) (delete-other-windows))
-               ))))
+                 ))))
         ('return
          cand)
         ))))
+
 #+end_src
 
 ****** group
@@ -953,14 +957,14 @@ This is a wrapper function around `consult-mu--view'. It parses CAND to extract 
 
 To use this as the default action for consult-mu, set `consult-mu-default-action' to #'consult-mu--view-action."
 
-  (let* ((info (cadr cand))
-         ;;(msgid (substring-no-properties (plist-get info :message-id)))
-         ;;(query (substring-no-properties (plist-get info :query)))
-         ;;(match-str (car (consult--command-split query)))
+  (let* ((info (cdr cand))
+         (msg (plist-get info :msg))
+         (msgid (substring-no-properties (plist-get msg :message-id)))
+         (query (substring-no-properties (plist-get info :query)))
+         (match-str (car (consult--command-split query)))
          )
-    (print (format "%s" info))
-    ;;(consult-mu--view msgid t consult-mu-mark-viewed-as-read match-str)
-    ;;(consult-mu-overlays-toggle consult-mu-view-buffer-name)
+    (consult-mu--view msgid t consult-mu-mark-viewed-as-read match-str)
+    (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     ))
 #+end_src
 
@@ -1110,6 +1114,7 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
 #+begin_src emacs-lisp
 (defun consult-mu--dynamic-collection (input)
     ;; Somehow generate candidates, e.g., via org-ql
+(save-excursion
   (consult-mu--update-headers input nil nil)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
@@ -1119,12 +1124,12 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
                              (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split input))) nil)))
                                                                     (consult-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                  do (forward-line 1)))
-        ))
+        )))
 #+end_src
 ****** internal async command
 #+begin_src emacs-lisp
 (defun consult-mu--async (prompt collection &optional initial)
-"Query mu4e messages asynchronously.
+  "Query mu4e messages asynchronously.
 
 This is a non-interactive internal function. For the interactive version see `consult-mu'.
 
@@ -1138,10 +1143,12 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
    (consult--dynamic-collection collection)
    :prompt prompt
    :lookup (consult-mu--lookup)
-   ;;:state (funcall #'consult-mu--state)
+   :state (funcall #'consult-mu--state)
    :initial (consult--async-split-initial initial)
    :group (if consult-mu-group-by #'consult-mu--group nil)
-   :add-history (list (consult--async-split-thingatpt 'symbol))
+   :add-history (append (list (consult--async-split-thingatpt 'symbol))
+                        consult-mu-saved-searches
+                        )
    :history '(:input consult-mu--history)
    :require-match t
    :category 'consult-mu-messages
