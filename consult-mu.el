@@ -1044,7 +1044,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
   (consult-mu--execute-all-marks)
   )
   (let* ((sel
-        (consult-mu--async "Search For:  " #'consult-mu--dynamic-collection initial)
+        (consult-mu--async (concat "[" (propertize "consult-mu" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
          ))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
