@@ -323,116 +323,25 @@ if IGNORE-CASE is non-nil.
             (substring string 11 -4)
             )))
 
-(defun consult-mu--expand-headers-string (msg string)
-  (cl-loop with str = nil
-           for c in (string-split string "%" t)
-           concat (concat (pcase  (substring c 0 1)
-                            ("f" (let ((sender (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :from) ";"))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if sender
-                                     (propertize (if (> length 0) (consult-mu--set-string-width sender length) sender) 'face 'consult-mu-sender-face))))
-                            ("t" (let ((receiver (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :to) ";"))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if receiver
-                                     (propertize (if (> length 0) (consult-mu--set-string-width receiver length) receiver) 'face 'consult-mu-sender-face))))
-                            ("s" (let ((subject (plist-get msg :subject))
-                                        (length (string-to-number (substring c 1 nil))))
-                                   (if subject
-                                     (propertize (if (> length 0) (consult-mu--set-string-width subject length) subject) 'face 'consult-mu-subject-face))))
-                            ("d" (let ((date (format-time-string "%a %d %b %y" (plist-get msg :date)))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if date
-                                     (propertize (if (> length 0) (consult-mu--set-string-width date length) date) 'face 'consult-mu-date-face))))
-
-                            ("p" (let ((priority (plist-get msg :priority))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if priority
-                                       (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" priority) length) (format "%s" priority)) 'face 'consult-mu-size-face))))
-                            ("z" (let ((size (file-size-human-readable (plist-get msg :size)))
-                                       (length (string-to-number (substring c 1 nil))))
-                                        (if size
-                                            (propertize (if (> length 0) (consult-mu--set-string-width size length) size)  'face 'consult-mu-size-face))))
-                            ("i" (let ((id (plist-get msg :message-id))
-                                       (length (string-to-number (substring c 1 nil))))
-                                  (if id
-                                     (propertize (if (> length 0) (consult-mu--set-string-width id length) id) 'face 'consult-mu-default-face))))
-
-                            ("g" (let ((flags  (plist-get msg :flags))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if flags
-                                     (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" flags) length) (format "%s" flags)) 'face 'consult-mu-flags-face))))
-
-                            ("G" (let ((flags (plist-get msg :flags))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if flags
-                                     (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" (mu4e~headers-flags-str flags)) length) (format "%s" (mu4e~headers-flags-str flags))) 'face 'consult-mu-flags-face))))
-
-                            ("x" (let ((tags (plist-get msg :tags))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if tags
-                                     (propertize (if (> length 0) (consult-mu--set-string-width tags length) tags) 'face 'consult-mu-tags-face) nil)))
-
-                            ("c" (let ((cc (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :cc) ";"))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if cc
-                                     (propertize (if (> length 0) (consult-mu--set-string-width cc length) cc) 'face 'consult-mu-tags-face))))
-
-                            ("h" (let ((bcc (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg :bcc) ";"))
-                                       (length (string-to-number (substring c 1 nil))))
-                             (if bcc
-                                     (propertize (if (> length 0) (consult-mu--set-string-width bcc length) bcc) 'face 'consult-mu-tags-face))))
-
-                            ("r" (let ((changed (format-time-string "%a %d %b %y" (plist-get msg :changed)))
-                                       (length (string-to-number (substring c 1 nil))))
-                                   (if changed
-                                     (propertize (if (> length 0) (consult-mu--set-string-width changed length) changed) 'face 'consult-mu-tags-face))))
-                            (_ nil)
-                            ) "  ")))
-
 (defun consult-mu-flags-to-string (FLAG)
   (cl-loop for c across FLAG
            collect
            (pcase (string c)
-             ("D" "draft")
-             ("F" "flagged")
-             ("N" "new")
-             ("P" "forwarded")
-             ("R"  "replied")
-             ("S" "read")
-             ("T" "trashed")
-             ("a" "attachment")
-             ("x" "encrrypted")
-             ("s" "signed")
-             ("u" "unread")
-             ("l" "list")
-             ("q" "personal")
-             ("c" "calendar")
-             (_ ""))))
-
-;;; Backend `mu` related functions
-
-(defun consult-mu--call-process (&rest args)
- "Runs \"mu\" in the command line and passes ARGS as command-line arguments.
-Returns a list where the CAR is exit status (e.g. 0 means success and non-zero means error) and CADR is the output's text. If mu is not found it returns '(127 \"\") and a message saying \"mu\" is not found."
-(if (executable-find "mu")
-      (with-temp-buffer
-        (set-buffer-file-coding-system 'cp1047)
-        (list (apply 'call-process "mu" nil (current-buffer) nil args)                         (replace-regexp-in-string "" "\n"                                                   (buffer-string))))
-  (progn
-      (message (propertize "\"mu\" is not found on this system" 'face 'warning))
-      '(127 ""))
-))
-
-(defun consult-mu--command-to-string (&rest args)
-  "Runs `consult-mu--call-process' and returns a string if there is no error.
-If there are erros passes them to *Messages*."
-  (let ((out (apply #'consult-mu--call-process args)))
-          (if (= (car out) 0)
-              (cadr out)
-            (progn
-              (message (cadr out))
-              nil)
-            )))
+             ("D" 'draft)
+             ("F" 'flagged)
+             ("N" 'new)
+             ("P" 'forwarded)
+             ("R" 'replied)
+             ("S" 'read)
+             ("T" 'trashed)
+             ("a" 'attachment)
+             ("x" 'encrrypted)
+             ("s" 'signed)
+             ("u" 'unread)
+             ("l" 'list)
+             ("q" 'personal)
+             ("c" 'calendar)
+             (_ nil))))
 
 (defun consult-mu--headers-append-handler (msglst)
   "Append one-line descriptions of messages in MSGLIST.
@@ -682,14 +591,95 @@ Put cursor on message with MSGID."
       (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
       (mu4e-headers-goto-message-id msgid)
       (mu4e-message-at-point)
-      ;;(mu4e-get-view-buffer)
-      ;;(mu4e-headers-view-message)
-     ;; (mu4e-view (mu4e-message-at-point))
       )
-  ;;(unless inhibit-read-only (setq inhibit-read-only t))
-  ;; (switch-to-buffer buffer)
-  ;; (delete-other-windows)
   )))
+
+(defun consult-mu--contact-string-to-plist (string)
+  "Convert STRING for contacts to plist"
+  (let* ((string (replace-regexp-in-string ">,\s\\|>;\s" ">\n" string))
+         (list (string-split string "\n" t)))
+    (mapcar (lambda (item)
+              (cond
+               ((string-match "\\(?2:.*\\)\s+<\\(?1:.+\\)>" item)
+                (list :email (or (match-string 1 item) nil) :name (or (match-string 2 item) nil)))
+               ((string-match "^\\(?1:.+@.+\..+$\\)" item)
+                 (list :email (or (match-string 1 item) nil) :name nil))
+               )) list)))
+
+(defun consult-mu--contact-name-or-email (contact)
+"Retrieve name or email of CONTACT."
+  (cond
+   ((stringp contact)
+    contact)
+   ((listp contact)
+   (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email) "")) contact ","))
+   ))
+
+(defun consult-mu--expand-headers-string (msg string)
+  (cl-loop with str = nil
+           for c in (string-split string "%" t)
+           concat (concat (pcase  (substring c 0 1)
+                            ("f" (let ((sender (consult-mu--contact-name-or-email (plist-get msg :from)))
+                                        (length (string-to-number (substring c 1 nil))))
+                                   (if sender
+                                       (propertize (if (> length 0) (consult-mu--set-string-width sender length) sender) 'face 'consult-mu-sender-face))))
+                            ("t" (let ((receiver (consult-mu--contact-name-or-email (plist-get msg :to)))
+                                        (length (string-to-number (substring c 1 nil))))
+                                   (if receiver
+                                       (propertize (if (> length 0) (consult-mu--set-string-width receiver length) receiver) 'face 'consult-mu-sender-face))))
+                            ("s" (let ((subject (plist-get msg :subject))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if subject
+                                       (propertize (if (> length 0) (consult-mu--set-string-width subject length) subject) 'face 'consult-mu-subject-face))))
+                            ("d" (let ((date (format-time-string "%a %d %b %y" (plist-get msg :date)))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if date
+                                       (propertize (if (> length 0) (consult-mu--set-string-width date length) date) 'face 'consult-mu-date-face))))
+
+                            ("p" (let ((priority (plist-get msg :priority))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if priority
+                                       (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" priority) length) (format "%s" priority)) 'face 'consult-mu-size-face))))
+                            ("z" (let ((size (file-size-human-readable (plist-get msg :size)))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if size
+                                       (propertize (if (> length 0) (consult-mu--set-string-width size length) size)  'face 'consult-mu-size-face))))
+                            ("i" (let ((id (plist-get msg :message-id))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if id
+                                       (propertize (if (> length 0) (consult-mu--set-string-width id length) id) 'face 'consult-mu-default-face))))
+
+                            ("g" (let ((flags  (plist-get msg :flags))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if flags
+                                       (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" flags) length) (format "%s" flags)) 'face 'consult-mu-flags-face))))
+
+                            ("G" (let ((flags (plist-get msg :flags))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if flags
+                                       (propertize (if (> length 0) (consult-mu--set-string-width (format "%s" (mu4e~headers-flags-str flags)) length) (format "%s" (mu4e~headers-flags-str flags))) 'face 'consult-mu-flags-face))))
+
+                            ("x" (let ((tags (plist-get msg :tags))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if tags
+                                       (propertize (if (> length 0) (consult-mu--set-string-width tags length) tags) 'face 'consult-mu-tags-face) nil)))
+
+                            ("c" (let ((cc (consult-mu--contact-name-or-email (plist-get msg :cc)))
+                                        (length (string-to-number (substring c 1 nil))))
+                                   (if cc
+                                       (propertize (if (> length 0) (consult-mu--set-string-width cc length) cc) 'face 'consult-mu-tags-face))))
+
+                            ("h" (let ((bcc (consult-mu--contact-name-or-email (plist-get msg :bcc)))
+                                        (length (string-to-number (substring c 1 nil))))
+                                   (if bcc
+                                       (propertize (if (> length 0) (consult-mu--set-string-width bcc length) bcc) 'face 'consult-mu-tags-face))))
+
+                            ("r" (let ((changed (format-time-string "%a %d %b %y" (plist-get msg :changed)))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if changed
+                                       (propertize (if (> length 0) (consult-mu--set-string-width changed length) changed) 'face 'consult-mu-tags-face))))
+                            (_ nil)
+                            ) "  ")))
 
 (defun consult-mu--quit-header-buffer ()
   (save-mark-and-excursion
@@ -716,36 +706,6 @@ Put cursor on message with MSGID."
           (mu4e-quit)
         ))))
 
-(defun consult-mu--format-candidate (cand highlight)
-  "Formats minibuffer candidates.
-
-INPUT is the query from the user.
-
-if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
-
-  (let* ((string (car cand))
-         (info (cadr cand))
-         (msg (plist-get info :msg))
-         (query (plist-get info :query))
-         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
-         (str (if consult-mu-headers-string
-                 (consult-mu--expand-headers-string msg consult-mu-headers-string)
-                  string)
-         ))
-         (if (and consult-mu-highlight-matches highlight)
-                     (cond
-                      ((listp match-str)
-                       (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
-                      ((stringp match-str)
-                       (setq str (consult-mu--highlight-match match-str str t))))
-                   str)
-
-    ;; (cons (propertize str :msg msg :query query :datetime datetime :date date :year year :month month :day day :week week :time time :msgid msgid :subject subject :from sender :to receiver :size size :tags tags) `(:msg ,msg :query ,query :datetime ,datetime :date ,date :year ,year :month ,month :day ,day :week ,week :time ,time :msgid ,msgid :subject ,subject :from ,sender :to ,receiver :size ,size :tags tags))
-    (cons (propertize str :msg msg :query query) `(:msg ,msg :query ,query))
-    ;; (print (format "%s" query))
-    ;;(list str info)
-    ))
-
 (defun consult-mu--lookup ()
 "Lookup function for repo candidates in consult-mu.
 This is passed as LOOKUP to `consult--read' on candidates and is used to format the output when a candidate is selected."
@@ -753,11 +713,10 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
     (let* ((info (cdr (assoc sel cands)))
            (msg  (plist-get info :msg))
            (subject (plist-get msg :subject))
-           ;;(title (plist-get (plist-get (car info) :msg) :subject))
-           ;;(title (plist-get (car info) :subject))
            )
-      (cons subject info
-      ))))
+      (setq my:test (plist-get msg :cc))
+      (cons subject info)
+      )))
 
 (defun consult-mu--state ()
   "State function for consult-mu candidates.
@@ -793,8 +752,14 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
       (field (if (not (keywordp consult-mu-group-by)) (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by)))
       (pcase field
         (:date (format-time-string "%a %d %b %y" (plist-get msg field)))
-        (:from (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
-        (:to (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+        (:from (cond
+                ((listp (plist-get msg field))
+                 (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+                (stringp (plist-get msg field) (plist-get msg field))))
+        (:to (cond
+                ((listp (plist-get msg field))
+                 (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+                (stringp (plist-get msg field) (plist-get msg field))))
         (:changed (format-time-string "%a %d %b %y" (plist-get msg field)))
         (:datetime (format-time-string "%F %r" (plist-get msg :date)))
         (:time (format-time-string "%X" (plist-get msg :date)))
@@ -849,136 +814,37 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     ))
 
-;; (defun consult-mu--transform (async builder)
-;;   "Adds annotation to minibuffer candiates for `consult-mu'.
+(defun consult-mu--dynamic-format-candidate (cand highlight)
+  "Formats minibuffer candidates.
 
-;; Returns ASYNC function after formating results with `consult-mu--format-candidate'.
-;; BUILDER is the command line builder function (e.g. `consult-mu--builder')."
-;;   (let ((input)
-;;         (buffer (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
-;;     `(lambda (action)
-;;        (cond
-;;         ((stringp action)
-;;          (setq input action)
-;;          (with-current-buffer ,buffer
-;;            ;;set mu4e variables so the headers buffer matches the results from commandline `mu` search
-;;            (pcase-let* ((`(,arg . ,opts) (consult--command-split action))
-;;                         (sortfield (cond
-;;                                     ((member "-s" opts) (nth (+ (cl-position "-s" opts :test 'equal) 1) opts))
-;;                                     ((member "--sortfield" opts) (nth (+ (cl-position "--sortfield" opts :test 'equal) 1) opts))
-;;                                     (t consult-mu-search-sort-field)))
-;;                         (mu4e-search-sort-field
-;;                          (pcase sortfield
-;;                            ('nil
-;;                             consult-mu-search-sort-field)
-;;                            ((or "date" "d")
-;;                             :date)
-;;                            ((or "subject" "s")
-;;                             :subject)
-;;                            ((or "size" "z")
-;;                             :size)
-;;                            ((or "prio" "p")
-;;                             :prio)
-;;                            ((or "from" "f")
-;;                             :from)
-;;                            ((or "to" "t")
-;;                             :to)
-;;                            ((or "list" "v")
-;;                             :list)
-;;                            (_
-;;                             consult-mu-search-sort-field)
-;;                            ))
-;;                          (mu4e-search-sort-direction
-;;                           (if
-;;                               (or (member "-z" opts) (member "--reverse" opts))
-;;                               (pcase consult-mu-search-sort-direction
-;;                                 ('descending
-;;                                  'ascending)
-;;                                 ('ascending
-;;                                  'descending))
-;;                             consult-mu-search-sort-direction))
-;;                          (mu4e-search-skip-duplicates
-;;                           (if (member "--skip-dups" opts) t mu4e-search-skip-duplicates))
-;;                          (mu4e-search-results-limit
-;;                           (cond
-;;                            ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
-;;                            ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
-;;                            (t consult-mu-maxnum)))
-;;                          (mu4e-search-threads
-;;                           (if (not (equal mu4e-search-sort-field :date)) nil t))
-;;                          )
-;;                         (consult-mu--update-headers arg nil nil)))
-;;            (funcall ,async action)
-;;            )
-;;          (t (mapcar (lambda (string)
-;;                       (consult-mu--format-candidate string input t))
-;;                     (funcall ,async action)))
-;;          ))))
+INPUT is the query from the user.
 
+if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
 
-(defun consult-mu--transform (async builder)
-  "Adds annotation to minibuffer candiates for `consult-mu'.
+  (let* ((string (car cand))
+         (info (cadr cand))
+         (msg (plist-get info :msg))
+         (query (plist-get info :query))
+         (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (str (if consult-mu-headers-string
+                 (consult-mu--expand-headers-string msg consult-mu-headers-string)
+                  string)
+         )
+         (str (propertize str :msg msg :query query))
+         )
+         (if (and consult-mu-highlight-matches highlight)
+                     (cond
+                      ((listp match-str)
+                       (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+                      ((stringp match-str)
+                       (setq str (consult-mu--highlight-match match-str str t))))
+                   str)
 
-Returns ASYNC function after formating results with `consult-mu--format-candidate'.
-BUILDER is the command line builder function (e.g. `consult-mu--builder')."
-  (let ((input)
-        (buffer (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
-    `(lambda (action)
-       (cond
-        ((stringp action)
-         (setq input action)
-         (with-current-buffer ,buffer
-           (consult-mu--update-headers action nil nil))
-           (funcall ,async action)
-           )
-         (t (mapcar (lambda (string)
-                      (consult-mu--format-candidate string input t))
-                    (funcall ,async action)))
-         ))))
-
-(defun consult-mu--builder (input)
-  "Build mu command line for searching messages by INPUT (e.g. `mu find INPUT)`."
-  (pcase-let* ((consult-mu-args (append consult-mu-args '("find")))
-               (cmd (consult--build-args consult-mu-args))
-               (`(,arg . ,opts) (consult--command-split input))
-               (flags (append cmd opts))
-               (sortfield (cond
-                           ((member "-s" flags) (nth (+ (cl-position "-s" opts :test 'equal) 1) flags))
-                           ((member "--sortfield" flags) (nth (+ (cl-position "--sortfield" flags :test 'equal) 1) flags))
-                           (t (substring (symbol-name consult-mu-search-sort-field) 1))))
-               (threads (if (not (equal sortfield :date)) nil (or (member "-t" flags) (member "--threads" flags) mu4e-search-threads)))
-               (skip-dups (or (member "-u" flags) (member "--skip-dups" flags) mu4e-search-skip-duplicates))
-               (include-related (or (member "-r" flags) (member "--include-related" flags) mu4e-search-include-related)))
-    (setq opts (append opts (list "--nocolor")))
-    (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx"
-                                                     consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
-    (unless (or (member "-s" flags) (member "--sortfiled" flags))
-    (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
-    (if threads (setq opts (append opts (list "--thread"))))
-    (if skip-dups (setq opts (append opts (list "--skip-dups"))))
-    (unless (or (member "-n" flags) (member "--maxnum" flags))
-      (if (> consult-mu-maxnum 0)
-          (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
-    (pcase consult-mu-search-sort-direction
-      ('descending
-       (if (or (member "-z" flags) (member "--reverse" flags))
-           (setq opts (remove "-z" (remove "--reverse" opts)))
-         (setq opts (append opts (list "--reverse")))))
-      ('ascending
-       )
-      (_
-       )
-      )
-    (pcase-let* ((`(,re . ,hl) (funcall consult--regexp-compiler arg 'basic t)))
-      (when re
-        (cons (append cmd
-                      (list (string-join re " "))
-                      opts)
-              hl)))))
-
-(defun consult-mu-get-candidates (input)
-(let ((msg (ignore-errors (mu4e-message-at-point))))
-  `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input))))
+    ;; (cons (propertize str :msg msg :query query :datetime datetime :date date :year year :month month :day day :week week :time time :msgid msgid :subject subject :from sender :to receiver :size size :tags tags) `(:msg ,msg :query ,query :datetime ,datetime :date ,date :year ,year :month ,month :day ,day :week ,week :time ,time :msgid ,msgid :subject ,subject :from ,sender :to ,receiver :size ,size :tags tags))
+    (cons str (list :msg msg :query query))
+    ;; (print (format "%s" query))
+    ;;(list str info)
+    ))
 
 (defun consult-mu--dynamic-collection (input)
     ;; Somehow generate candidates, e.g., via org-ql
@@ -990,16 +856,16 @@ BUILDER is the command line builder function (e.g. `consult-mu--builder')."
       (cl-loop until (eobp)
                collect (when-let ((msg (ignore-errors (mu4e-message-at-point)))
                              (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split input))) nil)))
-                                                                    (consult-mu--format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+                                                                    (consult-mu--dynamic-format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                  do (forward-line 1)))
         )))
 
-(defun consult-mu--async (prompt collection &optional initial)
+(defun consult-mu--dynamic (prompt collection &optional initial)
   "Query mu4e messages asynchronously.
 
 This is a non-interactive internal function. For the interactive version see `consult-mu'.
 
-It runs the command line from `consult-mu--builder' in an async process and returns the results (list of messages) as a completion tabe in minibuffer that will be passed to `consult--read'. The completion table gets dynamically updated as the user types in the minibuffer. Each candidate in the minibuffer is formatted by `consult-mu--transform' to add annotation and other info to the candidate.
+It runs the command line from `consult-mu--async-builder' in an async process and returns the results (list of messages) as a completion tabe in minibuffer that will be passed to `consult--read'. The completion table gets dynamically updated as the user types in the minibuffer. Each candidate in the minibuffer is formatted by `consult-mu--async-transform' to add annotation and other info to the candidate.
 
 PROMPT is the prompt in the minibuffer (passed as PROMPT to `consult--red'.)
 BUILDER is an async builder function passed to `consult--async-command'.
@@ -1024,6 +890,176 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
 (defun consult-mu (&optional initial noaction)
     "Lists results of `mu find` Asynchronously.
 
+This is an interactive wrapper function around `consult-mu--dynamic'. It queries the user for a search term in the minibuffer, then fetches a list of messages for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
+
+Upon selection of a candidate either
+ - the candidate is returned if NOACTION is non-nil
+ or
+ - the candidate is passed to `consult-mu-action' if NOACTION is nil.
+
+Additional commandline arguments can be passed in the minibuffer entry by typing `--` followed by command line arguments. For example the user can enter the following in the minibuffer:
+consult-mu -- -n 10
+and the async process will run `mu find -n 10` which changes the limit for the maximum number of results to 10.
+
+INITIAL is an optional arg for the initial input in the minibuffer. (passed as INITITAL to `consult-mu--dynamic').
+
+For more details on consult--async functionalities, see `consult-grep' and the official manual of consult, here: https://github.com/minad/consult.
+"
+  (interactive)
+  (save-mark-and-excursion
+  (consult-mu--execute-all-marks)
+  )
+  (let* ((sel
+        (consult-mu--dynamic (concat "[" (propertize "consult-mu" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
+         ))
+    (save-mark-and-excursion
+      (consult-mu--execute-all-marks)
+      )
+    (if noaction
+        sel
+      (progn
+        (funcall consult-mu-action sel)
+        sel))))
+
+(defun consult-mu--async-format-candidate (string input highlight)
+  "Formats minibuffer candidates.
+INPUT is the query from the user.
+if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
+
+  (let* ((query input)
+         (parts (string-split string consult-mu-delimiter))
+         (msgid (car parts))
+         (date (date-to-time (cadr parts)))
+         (sender (cadr (cdr parts)))
+         (sender (consult-mu--contact-string-to-plist sender))
+         (receiver (cadr (cdr (cdr parts))))
+         (receiver (consult-mu--contact-string-to-plist receiver))
+         (subject (cadr (cdr (cdr (cdr parts)))))
+         (size (string-to-number (cadr (cdr (cdr (cdr (cdr parts)))))))
+         (flags (consult-mu-flags-to-string (cadr (cdr (cdr (cdr (cdr (cdr parts))))))))
+         (tags (cadr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))
+         (priority (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts)))))))))
+         (cc (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))))
+         (cc (consult-mu--contact-string-to-plist cc))
+         (bcc (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts)))))))))))
+         (bcc (consult-mu--contact-string-to-plist bcc))
+         (msg (list :subject subject :date date :from sender :to receiver :size size :message-id msgid :flags flags :tags tags :priority priority :cc cc :bcc bcc))
+         (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
+         (str (if consult-mu-headers-string
+                 (consult-mu--expand-headers-string msg consult-mu-headers-string)
+                  (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
+                          (propertize (format-time-string "%X" date) 'face 'consult-mu-date-face)
+                          (propertize sender 'face 'consult-mu-sender-face)
+                      (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.6))) 'face 'consult-mu-subject-face)
+
+
+                      (propertize (file-size-human-readable size) 'face 'consult-mu-size-face)
+                      (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
+                      (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face)
+                      )))
+         (str (propertize str :msg msg :query query))
+         )
+    (if (and consult-mu-highlight-matches highlight)
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-mu--highlight-match match-str str t))))
+      str)
+    (cons str (list :msg msg :query query))))
+
+(defun consult-mu--async-transform (async builder)
+  "Adds annotation to minibuffer candiates for `consult-mu'.
+
+Returns ASYNC function after formating results with `consult-mu--dynamic-format-candidate'.
+BUILDER is the command line builder function (e.g. `consult-mu--async-builder')."
+  (let ((input)
+        (buffer (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
+    `(lambda (action)
+       (cond
+        ((stringp action)
+         (setq input action)
+         (with-current-buffer ,buffer
+           (consult-mu--update-headers action nil nil))
+           (funcall ,async action)
+           )
+         (t (mapcar (lambda (string)
+                      (consult-mu--async-format-candidate string input t))
+                    (funcall ,async action)))
+         ))))
+
+(defun consult-mu--async-builder (input)
+  "Build mu command line for searching messages by INPUT (e.g. `mu find INPUT)`."
+  (pcase-let* ((consult-mu-args (append consult-mu-args '("find")))
+               (cmd (consult--build-args consult-mu-args))
+               (`(,arg . ,opts) (consult--command-split input))
+               (flags (append cmd opts))
+               (sortfield (cond
+                           ((member "-s" flags) (nth (+ (cl-position "-s" opts :test 'equal) 1) flags))
+                           ((member "--sortfield" flags) (nth (+ (cl-position "--sortfield" flags :test 'equal) 1) flags))
+                           (t (substring (symbol-name consult-mu-search-sort-field) 1))))
+               (threads (if (not (equal sortfield :date)) nil (or (member "-t" flags) (member "--threads" flags) mu4e-search-threads)))
+               (skip-dups (or (member "-u" flags) (member "--skip-dups" flags) mu4e-search-skip-duplicates))
+               (include-related (or (member "-r" flags) (member "--include-related" flags) mu4e-search-include-related)))
+    (setq opts (append opts (list "--nocolor")))
+    (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx%sp%sc%sh"
+                                                     consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
+    (unless (or (member "-s" flags) (member "--sortfiled" flags))
+    (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
+    (if threads (setq opts (append opts (list "--thread"))))
+    (if skip-dups (setq opts (append opts (list "--skip-dups"))))
+    (unless (or (member "-n" flags) (member "--maxnum" flags))
+      (if (> consult-mu-maxnum 0)
+          (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
+    (pcase consult-mu-search-sort-direction
+      ('descending
+       (if (or (member "-z" flags) (member "--reverse" flags))
+           (setq opts (remove "-z" (remove "--reverse" opts)))
+         (setq opts (append opts (list "--reverse")))))
+      ('ascending
+       )
+      (_
+       )
+      )
+    (pcase-let* ((`(,re . ,hl) (funcall consult--regexp-compiler arg 'basic t)))
+      (when re
+        (cons (append cmd
+                      (list (string-join re " "))
+                      opts)
+              hl)))))
+
+(defun consult-mu--async (prompt builder &optional initial)
+"Query mu4e messages asynchronously.
+
+This is a non-interactive internal function. For the interactive version see `consult-mu'.
+
+It runs the command line from `consult-mu--async-builder' in an async process and returns the results (list of messages) as a completion tabe in minibuffer that will be passed to `consult--read'. The completion table gets dynamically updated as the user types in the minibuffer. Each candidate in the minibuffer is formatted by `consult-mu--async-transform' to add annotation and other info to the candidate.
+
+PROMPT is the prompt in the minibuffer (passed as PROMPT to `consult--red'.)
+BUILDER is an async builder function passed to `consult--async-command'.
+INITIAL is an optional arg for the initial input in the minibuffer. (passed as INITITAL to `consult--read'.)
+"
+  (consult--read
+   (consult--async-command builder
+     (consult-mu--async-transform builder)
+     )
+   :prompt prompt
+   :lookup (consult-mu--lookup)
+   :state (funcall #'consult-mu--state)
+   :initial (consult--async-split-initial initial)
+   :group (if consult-mu-group-by #'consult-mu--group nil)
+   :add-history (append (list (consult--async-split-thingatpt 'symbol))
+                        consult-mu-saved-searches
+                        )
+   :history '(:input consult-mu--history)
+   :require-match t
+   :category 'consult-mu-messages
+   :preview-key consult-mu-preview-key
+   :sort nil))
+
+(defun consult-mu-async (&optional initial noaction)
+    "Lists results of `mu find` Asynchronously.
+
 This is an interactive wrapper function around `consult-mu--async'. It queries the user for a search term in the minibuffer, then fetches a list of messages for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
 
 Upon selection of a candidate either
@@ -1044,7 +1080,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
   (consult-mu--execute-all-marks)
   )
   (let* ((sel
-        (consult-mu--async (concat "[" (propertize "consult-mu" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
+        (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial)
          ))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
