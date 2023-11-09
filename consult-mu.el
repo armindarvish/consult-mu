@@ -544,42 +544,42 @@ Put cursor on message with MSGID."
   (unless inhibit-read-only (setq inhibit-read-only t))
   )
 
-(defun consult-mu--update-view (msgid mark-as-read match-str)
-  "Open the message with MSGID in `consult-mu-view-buffer-name'."
-  (cl-letf* (((symbol-function #'mu4e-view) #'consult-mu--view-msg))
-    (when-let ((buffer (get-buffer consult-mu-view-buffer-name)))
-    (with-current-buffer buffer
-       (let ((inhibit-read-only t))
-        (erase-buffer)
-        )))
-      (with-current-buffer consult-mu-headers-buffer-name
-        (ignore-errors (mu4e-headers-goto-message-id msgid))
-              (mu4e--server-call-mu
-               `(view
-                 :docid nil
-                 :msgid ,msgid
-                 :mark-as-read ,mark-as-read
-                 :rename  ,(and mu4e-change-filenames-when-moving t)
-                 ))
-              ;; wait until the view buffer is updated. Otherwise the cl-letf override is reversed and nothing is shown!
-              (while (or (not (get-buffer consult-mu-view-buffer-name))
-                         (with-current-buffer consult-mu-view-buffer-name
-                           (or
-                           (string-empty-p (buffer-substring (point-min) (point-max)))
-                           (equal (buffer-substring (point-min) (+ (point-min) (length "Loading..."))) "Loading...")
-                           )))
-                (sleep-for 0.005))
-              ;; if the headers buffer is open, bury it, so does not take space when previewing messages!
-              ;;(bury-buffer)
-              )
-              ;;(goto-char (point-min))
-      (when match-str
-        (add-to-history 'search-ring match-str)
-      (consult-mu--overlay-match match-str consult-mu-view-buffer-name t))
-      )
-  ;; make sure minibuffer is not in read-only!
-  (unless inhibit-read-only (setq inhibit-read-only t))
-  )
+;; (defun consult-mu--update-view (msgid mark-as-read match-str)
+;;   "Open the message with MSGID in `consult-mu-view-buffer-name'."
+;;   (cl-letf* (((symbol-function #'mu4e-view) #'consult-mu--view-msg))
+;;     (when-let ((buffer (get-buffer consult-mu-view-buffer-name)))
+;;     (with-current-buffer buffer
+;;        (let ((inhibit-read-only t))
+;;         (erase-buffer)
+;;         )))
+;;       (with-current-buffer consult-mu-headers-buffer-name
+;;         (ignore-errors (mu4e-headers-goto-message-id msgid))
+;;               (mu4e--server-call-mu
+;;                `(view
+;;                  :docid nil
+;;                  :msgid ,msgid
+;;                  :mark-as-read ,mark-as-read
+;;                  :rename  ,(and mu4e-change-filenames-when-moving t)
+;;                  ))
+;;               ;; wait until the view buffer is updated. Otherwise the cl-letf override is reversed and nothing is shown!
+;;               (while (or (not (get-buffer consult-mu-view-buffer-name))
+;;                          (with-current-buffer consult-mu-view-buffer-name
+;;                            (or
+;;                            (string-empty-p (buffer-substring (point-min) (point-max)))
+;;                            (equal (buffer-substring (point-min) (+ (point-min) (length "Loading..."))) "Loading...")
+;;                            )))
+;;                 (sleep-for 0.005))
+;;               ;; if the headers buffer is open, bury it, so does not take space when previewing messages!
+;;               ;;(bury-buffer)
+;;               )
+;;               ;;(goto-char (point-min))
+;;       (when match-str
+;;         (add-to-history 'search-ring match-str)
+;;       (consult-mu--overlay-match match-str consult-mu-view-buffer-name t))
+;;       )
+;;   ;; make sure minibuffer is not in read-only!
+;;   (unless inhibit-read-only (setq inhibit-read-only t))
+;;   )
 
 (defun consult-mu--execute-all-marks (&optional no-confirmation)
   (interactive "P")
@@ -1259,7 +1259,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
                (query (substring-no-properties (plist-get info :query)))
                (opts (cdr (consult--command-split query)))
                (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-        (consult-mu--async-update-headers query t msgid))
+        (consult-mu--update-headers query t msgid))
         (funcall consult-mu-action sel)
         sel))))
 
