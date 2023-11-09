@@ -359,7 +359,48 @@ Overrides `mu4e~headers-append-handler' for `consult-mu'."
       (mu4e~headers-insert-header msg (point-max))))
     msglst))))
 
-(defun consult-mu--view-msg (msg)
+;; (defun consult-mu--view-msg (msg)
+;;   "Display the message MSG in a new buffer, and keep in sync with `consult-mu-headers-buffer-name' buffer.
+;; \"In sync\" here means that moving to the next/previous message
+;; in the the message view affects `consult-mu-headers-buffer-name', as does marking etc.
+
+;; As a side-effect, a message that is being viewed loses its
+;; `unread' marking if it still had that.
+
+;; Overrides `mu4e-view' for `consult-mu'."
+;;   ;; update headers, if necessary.
+;;   (mu4e~headers-update-handler msg nil nil)
+
+;;   (let* ((linked-headers-buffer (mu4e-get-headers-buffer "*consult-mu-headers*" t))
+;;          (mu4e-view-buffer-name "*consult-mu-view*"))
+;;     (setq gnus-article-buffer (mu4e-get-view-buffer linked-headers-buffer t))
+;;     (with-current-buffer gnus-article-buffer
+;;       (let ((inhibit-read-only t))
+;;         (remove-overlays (point-min) (point-max) 'mu4e-overlay t)
+;;         (erase-buffer)
+;;         (insert-file-contents-literally
+;;          (mu4e-message-readable-path msg) nil nil nil t)
+;;         (setq-local mu4e--view-message msg)
+;;         (mu4e--view-render-buffer msg))
+;;       (mu4e-loading-mode 0)))
+
+;;   (unless (mu4e--view-detached-p gnus-article-buffer)
+;;     (with-current-buffer mu4e-linked-headers-buffer
+;;       (setq-local mu4e~headers-view-win
+;;                   (mu4e-display-buffer gnus-article-buffer nil)
+;;                   )
+;;       (unless (window-live-p mu4e~headers-view-win)
+;;         (mu4e-error "Cannot get a message view"))
+;;       ))
+
+;;   (with-current-buffer gnus-article-buffer
+;;     (let ((inhibit-read-only t))
+;;       (run-hooks 'mu4e-view-rendered-hook)
+;;       ;;replace the following with appropriate overlay highlight
+;;       ;;(highlight-regexp mu4e--search-last-query 'consult-mu-preview-match-face)
+;;       )))
+
+(defun consult-mu--view-msg (msg &optional buffername)
   "Display the message MSG in a new buffer, and keep in sync with `consult-mu-headers-buffer-name' buffer.
 \"In sync\" here means that moving to the next/previous message
 in the the message view affects `consult-mu-headers-buffer-name', as does marking etc.
@@ -369,36 +410,26 @@ As a side-effect, a message that is being viewed loses its
 
 Overrides `mu4e-view' for `consult-mu'."
   ;; update headers, if necessary.
-  (mu4e~headers-update-handler msg nil nil)
-  (let* ((linked-headers-buffer (get-buffer "*consult-mu-headers*"))
-         (mu4e-view-buffer-name "*consult-mu-view*"))
-    (setq gnus-article-buffer (mu4e-get-view-buffer nil t))
-
+  ;;(mu4e~headers-update-handler msg nil nil)
+  (let* ((linked-headers-buffer (mu4e-get-headers-buffer "*consult-mu-headers*" t))
+         (mu4e-view-buffer-name (or buffername consult-mu-view-buffer-name)))
+    (setq gnus-article-buffer (mu4e-get-view-buffer linked-headers-buffer t))
     (with-current-buffer gnus-article-buffer
       (let ((inhibit-read-only t))
+        (erase-buffer)
         (remove-overlays (point-min) (point-max) 'mu4e-overlay t)
         (erase-buffer)
         (insert-file-contents-literally
          (mu4e-message-readable-path msg) nil nil nil t)
         (setq-local mu4e--view-message msg)
-        (mu4e--view-render-buffer msg))
-      (mu4e-loading-mode 0)))
-
-  (unless (mu4e--view-detached-p gnus-article-buffer)
-    (with-current-buffer mu4e-linked-headers-buffer
-      (setq-local mu4e~headers-view-win
-                  (mu4e-display-buffer gnus-article-buffer nil)
-                  )
-      (unless (window-live-p mu4e~headers-view-win)
-        (mu4e-error "Cannot get a message view"))
+        (mu4e--view-render-buffer msg)
+        (mu4e-loading-mode 0)
+        (with-current-buffer linked-headers-buffer
+          (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
+        (run-hooks 'mu4e-view-rendered-hook)
       ))
 
-  (with-current-buffer gnus-article-buffer
-    (let ((inhibit-read-only t))
-      (run-hooks 'mu4e-view-rendered-hook)
-      ;;replace the following with appropriate overlay highlight
-      ;;(highlight-regexp mu4e--search-last-query 'consult-mu-preview-match-face)
-      )))
+    (unless inhibit-read-only (setq inhibit-read-only t))))
 
 (defun consult-mu--headers-clear (&optional text)
   "Clear the headers buffer and related data structures.
@@ -714,37 +745,9 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
            (msg  (plist-get info :msg))
            (subject (plist-get msg :subject))
            )
-      (setq my:test (plist-get msg :cc))
+      (setq my:test msg)
       (cons subject info)
       )))
-
-(defun consult-mu--state ()
-  "State function for consult-mu candidates.
-This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
-  (lambda (action cand)
-    (let ((preview (consult--buffer-preview)))
-      (pcase action
-        ('preview
-         (if cand
-             (when-let* ((info (cdr cand))
-                         (msg (plist-get info :msg))
-                         (query (plist-get info :query))
-                         (msgid (substring-no-properties (plist-get msg :message-id)))
-                         (match-str (car (consult--command-split query)))
-                         (match-str (car (consult--command-split query)))
-                         (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
-                         (buffer consult-mu-view-buffer-name))
-               ;;(get-buffer-create consult-mu-view-buffer-name)
-               (add-to-list 'consult-mu--view-buffers-list buffer)
-               (funcall preview action
-                        (consult-mu--view msgid nil consult-mu-mark-previewed-as-read match-str)
-                        )
-               (with-current-buffer consult-mu-view-buffer-name
-                 (unless (one-window-p) (delete-other-windows))
-                 ))))
-        ('return
-         cand)
-        ))))
 
 (defun consult-mu--group-name (cand)
 (if consult-mu-group-by
@@ -779,23 +782,74 @@ This is passed as GROUP to `consult--read' and is used to group emails by date."
     (if transform (substring cand) name)
     ))
 
-(defun consult-mu--view (msgid select mark-as-read match-str)
+;; (defun consult-mu--view (msgid select mark-as-read match-str)
+;;   "Opens message with MSGID in `consult-mu-headers' and `consult-mu-view'."
+;;   (cl-letf* (((symbol-function #'mu4e-view) #'consult-mu--view-msg))
+;;     (when-let ((buf (get-buffer consult-mu-headers-buffer-name)))
+;;       (with-current-buffer buf
+;;         (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
+;;         (mu4e-headers-goto-message-id msgid)
+;;         (consult-mu--update-view msgid mark-as-read match-str)
+;;         (if select
+;;         (switch-to-buffer buf))
+;;         )
+;;       (with-current-buffer consult-mu-view-buffer-name
+;;         (goto-char (point-min)))
+;;       (if select
+;;           (select-window (get-buffer-window consult-mu-view-buffer-name)))
+;;       ))
+;;   consult-mu-view-buffer-name)
+
+
+
+;; (defun consult-mu--view-action (cand)
+;;   "Opens the canidate, CAND, from consult-mu.
+
+;; This is a wrapper function around `consult-mu--view'. It parses CAND to extract relevant msgid and passes them to `consult-mu--view'.
+
+;; To use this as the default action for consult-mu, set `consult-mu-default-action' to #'consult-mu--view-action."
+
+;;   (let* ((info (cdr cand))
+;;          (msg (plist-get info :msg))
+;;          (msgid (substring-no-properties (plist-get msg :message-id)))
+;;          (query (substring-no-properties (plist-get info :query)))
+;;          (match-str (car (consult--command-split query)))
+;;          )
+;;     (consult-mu--view msgid t consult-mu-mark-viewed-as-read match-str)
+;;     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
+;;     ))
+
+(defun consult-mu--view (msg noselect mark-as-read match-str)
   "Opens message with MSGID in `consult-mu-headers' and `consult-mu-view'."
-  (cl-letf* (((symbol-function #'mu4e-view) #'consult-mu--view-msg))
-    (when-let ((buf consult-mu-headers-buffer-name))
+  (let ((msgid (plist-get msg :message-id)))
+    (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
       (with-current-buffer buf
+        (goto-char (point-min))
         (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
-        (mu4e-headers-goto-message-id msgid)
-        (consult-mu--update-view msgid mark-as-read match-str)
-        (if select
-        (switch-to-buffer buf))
-        )
-      (with-current-buffer consult-mu-view-buffer-name
-        (goto-char (point-min)))
-      (if select
-          (select-window (get-buffer-window consult-mu-view-buffer-name)))
-      ))
-  consult-mu-view-buffer-name)
+        (unless noselect
+          (switch-to-buffer buf))
+        ))
+
+    (consult-mu--view-msg msg consult-mu-view-buffer-name)
+
+    (with-current-buffer consult-mu-headers-buffer-name
+      (mu4e-headers-goto-message-id msgid)
+      (if mark-as-read
+          (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N"))
+      )
+
+    (when match-str
+      (add-to-history 'search-ring match-str)
+      (consult-mu--overlay-match match-str consult-mu-view-buffer-name t))
+
+    (with-current-buffer consult-mu-view-buffer-name
+      (goto-char (point-min)))
+
+    (unless noselect
+      (select-window (get-buffer-window consult-mu-view-buffer-name)))
+
+    consult-mu-view-buffer-name))
+
 
 (defun consult-mu--view-action (cand)
   "Opens the canidate, CAND, from consult-mu.
@@ -806,11 +860,10 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
 
   (let* ((info (cdr cand))
          (msg (plist-get info :msg))
-         (msgid (substring-no-properties (plist-get msg :message-id)))
          (query (substring-no-properties (plist-get info :query)))
          (match-str (car (consult--command-split query)))
          )
-    (consult-mu--view msgid t consult-mu-mark-viewed-as-read match-str)
+    (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     ))
 
@@ -860,6 +913,62 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                  do (forward-line 1)))
         )))
 
+;; (defun consult-mu--dynamic-state ()
+;;   "State function for consult-mu candidates.
+;; This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
+;;   (lambda (action cand)
+;;     (let ((preview (consult--buffer-preview)))
+;;       (pcase action
+;;         ('preview
+;;          (if cand
+;;              (when-let* ((info (cdr cand))
+;;                          (msg (plist-get info :msg))
+;;                          (query (plist-get info :query))
+;;                          (msgid (substring-no-properties (plist-get msg :message-id)))
+;;                          (match-str (car (consult--command-split query)))
+;;                          (match-str (car (consult--command-split query)))
+;;                          (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+;;                          (buffer consult-mu-view-buffer-name))
+;;                ;;(get-buffer-create consult-mu-view-buffer-name)
+;;                (add-to-list 'consult-mu--view-buffers-list buffer)
+;;                (funcall preview action
+;;                         (consult-mu--view msgid nil consult-mu-mark-previewed-as-read match-str)
+;;                         )
+;;                (with-current-buffer consult-mu-view-buffer-name
+;;                  (unless (one-window-p) (delete-other-windows))
+;;                  ))))
+;;         ('return
+;;          cand)
+;;         ))))
+
+(defun consult-mu--dynamic-state ()
+  "State function for consult-mu candidates.
+This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
+  (lambda (action cand)
+    (let ((preview (consult--buffer-preview)))
+      (pcase action
+        ('preview
+         (if cand
+             (when-let* ((info (cdr cand))
+                         (msg (plist-get info :msg))
+                         (query (plist-get info :query))
+                         (msgid (substring-no-properties (plist-get msg :message-id)))
+                         (match-str (car (consult--command-split query)))
+                         (match-str (car (consult--command-split query)))
+                         (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+                         (buffer consult-mu-view-buffer-name))
+               ;;(get-buffer-create consult-mu-view-buffer-name)
+               (add-to-list 'consult-mu--view-buffers-list buffer)
+               (funcall preview action
+                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
+                        )
+               (with-current-buffer consult-mu-view-buffer-name
+                 (unless (one-window-p) (delete-other-windows))
+                 ))))
+        ('return
+         cand)
+        ))))
+
 (defun consult-mu--dynamic (prompt collection &optional initial)
   "Query mu4e messages asynchronously.
 
@@ -875,7 +984,7 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
    (consult--dynamic-collection collection)
    :prompt prompt
    :lookup (consult-mu--lookup)
-   :state (funcall #'consult-mu--state)
+   :state (funcall #'consult-mu--dynamic-state)
    :initial (consult--async-split-initial initial)
    :group (if consult-mu-group-by #'consult-mu--group nil)
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
@@ -943,7 +1052,8 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (cc (consult-mu--contact-string-to-plist cc))
          (bcc (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts)))))))))))
          (bcc (consult-mu--contact-string-to-plist bcc))
-         (msg (list :subject subject :date date :from sender :to receiver :size size :message-id msgid :flags flags :tags tags :priority priority :cc cc :bcc bcc))
+         (path (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))))))
+         (msg (list :subject subject :date date :from sender :to receiver :size size :message-id msgid :flags flags :tags tags :priority priority :cc cc :bcc bcc :path path))
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
          (str (if consult-mu-headers-string
                  (consult-mu--expand-headers-string msg consult-mu-headers-string)
@@ -967,25 +1077,85 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
       str)
     (cons str (list :msg msg :query query))))
 
+;; (defun consult-mu--async-state ()
+;;   "State function for consult-mu-async candidates.
+;; This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
+;;   (lambda (action cand)
+;;     (let ((preview (consult--buffer-preview)))
+;;       (pcase action
+;;         ('preview
+;;          (if cand
+;;              (when-let* ((info (cdr cand))
+;;                          (msg (plist-get info :msg))
+;;                          (query (plist-get info :query))
+;;                          (msgid (substring-no-properties (plist-get msg :message-id)))
+;;                          (match-str (car (consult--command-split query)))
+;;                          (match-str (car (consult--command-split query)))
+;;                          (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+;;                          (buffer consult-mu-view-buffer-name))
+;;                ;;(get-buffer-create consult-mu-view-buffer-name)
+;;                (add-to-list 'consult-mu--view-buffers-list buffer)
+;;                (funcall preview action
+;;                         (consult-mu--view msgid nil consult-mu-mark-previewed-as-read match-str)
+;;                         )
+;;                (with-current-buffer consult-mu-view-buffer-name
+;;                  (unless (one-window-p) (delete-other-windows))
+;;                  ))))
+;;         ('return
+;;          cand)
+;;         ))))
+
+(defun consult-mu--async-state ()
+  "State function for consult-mu candidates.
+This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
+  (lambda (action cand)
+    (let ((preview (consult--buffer-preview)))
+      (pcase action
+        ('preview
+         (if cand
+             (when-let* ((info (cdr cand))
+                         (msg (plist-get info :msg))
+                         (msgid (substring-no-properties (plist-get msg :message-id)))
+                         (query (plist-get info :query))
+                         (match-str (car (consult--command-split query)))
+                         (match-str (car (consult--command-split query)))
+                         (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+                         (buffer consult-mu-view-buffer-name))
+               ;; (let* ((opts (cdr (consult--command-split query)))
+               ;;       (query (string-join (append (list (concat "msgid:" msgid)) opts) " ")))
+               ;;(get-buffer-create consult-mu-view-buffer-name)
+               (add-to-list 'consult-mu--view-buffers-list buffer)
+               ;;(consult-mu--async-update-headers query t msgid)
+               (funcall preview action
+                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
+                        )
+               (with-current-buffer consult-mu-view-buffer-name
+                 (unless (one-window-p) (delete-other-windows))
+                 ))))
+        ('return
+         cand)
+        ))))
+
 (defun consult-mu--async-transform (async builder)
   "Adds annotation to minibuffer candiates for `consult-mu'.
 
 Returns ASYNC function after formating results with `consult-mu--dynamic-format-candidate'.
 BUILDER is the command line builder function (e.g. `consult-mu--async-builder')."
-  (let ((input)
-        (buffer (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
+  (let ((input))
     `(lambda (action)
        (cond
         ((stringp action)
          (setq input action)
-         (with-current-buffer ,buffer
-           (consult-mu--update-headers action nil nil))
-           (funcall ,async action)
-           )
-         (t (mapcar (lambda (string)
+         (funcall ,async action)
+         )
+        ((consp action)
+         (funcall ,async (mapcar (lambda (string)
                       (consult-mu--async-format-candidate string input t))
-                    (funcall ,async action)))
-         ))))
+                    action))
+         )
+         (t (funcall ,async action))
+         )
+         )))
 
 (defun consult-mu--async-builder (input)
   "Build mu command line for searching messages by INPUT (e.g. `mu find INPUT)`."
@@ -1001,8 +1171,8 @@ BUILDER is the command line builder function (e.g. `consult-mu--async-builder').
                (skip-dups (or (member "-u" flags) (member "--skip-dups" flags) mu4e-search-skip-duplicates))
                (include-related (or (member "-r" flags) (member "--include-related" flags) mu4e-search-include-related)))
     (setq opts (append opts (list "--nocolor")))
-    (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx%sp%sc%sh"
-                                                     consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
+    (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx%sp%sc%sh%sl"
+                                                     consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
     (unless (or (member "-s" flags) (member "--sortfiled" flags))
     (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
     (if threads (setq opts (append opts (list "--thread"))))
@@ -1044,7 +1214,7 @@ INITIAL is an optional arg for the initial input in the minibuffer. (passed as I
      )
    :prompt prompt
    :lookup (consult-mu--lookup)
-   :state (funcall #'consult-mu--state)
+   :state (funcall #'consult-mu--async-state)
    :initial (consult--async-split-initial initial)
    :group (if consult-mu-group-by #'consult-mu--group nil)
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
@@ -1084,9 +1254,17 @@ For more details on consult--async functionalities, see `consult-grep' and the o
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
       )
+
     (if noaction
         sel
       (progn
+        (let* ((info (cdr sel))
+               (msg (plist-get info :msg))
+               (msgid (substring-no-properties (plist-get msg :message-id)))
+               (query (substring-no-properties (plist-get info :query)))
+               (opts (cdr (consult--command-split query)))
+               (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+        (consult-mu--async-update-headers query t msgid))
         (funcall consult-mu-action sel)
         sel))))
 
