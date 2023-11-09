@@ -494,6 +494,7 @@ Update `consult-mu-headers-buffer-name' but do not switch to buffer.
 If IGNORE-HISTORY is true, do *not* update the query history stack, `mu4e--search-query-past'.
 
 Put cursor on message with MSGID."
+(consult-mu--execute-all-marks)
 (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
@@ -518,6 +519,7 @@ Put cursor on message with MSGID."
           (run-hook-with-args 'mu4e-search-hook expr)
           (consult-mu--headers-clear mu4e~search-message)
           (setq mu4e~headers-search-start (float-time))
+
           (pcase-let* ((`(,arg . ,opts) (consult--command-split query))
                        (mu4e-search-sort-field (consult-mu--set-mu4e-search-sortfield opts))
                        (mu4e-search-sort-direction (consult-mu--set-mu4e-search-sort-direction opts))
@@ -585,13 +587,15 @@ Put cursor on message with MSGID."
   (interactive "P")
   (when-let* ((buf (get-buffer consult-mu-headers-buffer-name)))
     (with-current-buffer buf
-      (pop-to-buffer buf)
-      (unless (one-window-p) (delete-other-windows))
-      (mu4e--mark-in-context
-       (let* ((marknum (mu4e-mark-marks-num)))
-         (unless (zerop marknum)
-           (mu4e-mark-execute-all no-confirmation))))
-      (quit-window)
+      (when (eq major-mode 'mu4e-headers-mode)
+        (mu4e--mark-in-context
+         (let* ((marknum (mu4e-mark-marks-num)))
+           (unless (zerop marknum)
+             (pop-to-buffer buf)
+             (unless (one-window-p) (delete-other-windows))
+             (mu4e-mark-execute-all no-confirmation)
+             (quit-window))))
+        )
       ))
   )
 

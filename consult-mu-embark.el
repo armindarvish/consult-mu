@@ -18,6 +18,13 @@
 (require 'embark)
 (require 'consult-mu)
 
+;;; Customization Variables
+(defcustom consult-mu-embark-noconfirm-before-exxecute nil
+  "Should consult-mu-embark skip confirmation when executing marks?"
+  :group 'consult-mu
+  :type 'boolean
+  )
+
 ;;; Define Embark Action Functions
 (defun consult-mu-embark-default-action (cand)
   "Open the link in an emacs buffer"
@@ -50,17 +57,43 @@
         (docstring (format "Mark the current message for %s." mark)))
     `(progn
        (defun ,funcname (cand) ,docstring
-              (when-let* ((msgid (plist-get (get-text-property 0 :msg cand) :message-id))
-                          (buf (get-buffer consult-mu-headers-buffer-name))
-                          )
-                (with-current-buffer buf
-                  (goto-char (point-min))
-                  (if (equal (mu4e-message-field-at-point :msgid) msgid)
-                      (mu4e-headers-mark-and-next ',mark)
+              (let* ((msg (get-text-property 0 :msg cand))
+                     (msgid (plist-get msg  :message-id))
+                     (query (get-text-property 0 :query cand))
+                     (buf (get-buffer consult-mu-headers-buffer-name))
+                     )
+                (if buf
                     (progn
-                      (mu4e-headers-goto-message-id msgid)
-                      (mu4e-headers-mark-and-next ',mark)
-                      ))))))))
+                      (with-current-buffer buf
+                        (if (eq major-mode 'mu4e-headers-mode)
+                            (progn
+                              (goto-char (point-min))
+                              (mu4e-headers-goto-message-id msgid)
+                              (if (equal (mu4e-message-field-at-point :message-id) msgid)
+                                  (mu4e-headers-mark-and-next ',mark)
+                                (progn
+                                  (let* ((opts (cdr (consult--command-split query)))
+                                         (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+                                    (consult-mu--update-headers query t msgid))
+                                  (with-current-buffer buf
+                                    (goto-char (point-min))
+                                    (mu4e-headers-goto-message-id msgid)
+                                    (if (equal (mu4e-message-field-at-point :message-id) msgid)
+                                        (mu4e-headers-mark-and-next ',mark))))))
+                          (progn
+                            (let* ((opts (cdr (consult--command-split query)))
+                                   (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+                              (consult-mu--update-headers query t msgid))
+                            (with-current-buffer buf
+                              (goto-char (point-min))
+                              (mu4e-headers-goto-message-id msgid)
+                              (if (equal (mu4e-message-field-at-point :message-id) msgid)
+                                  (mu4e-headers-mark-and-next ',mark)))))
+                        )
+                      )
+                  )
+
+                )))))
 
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
