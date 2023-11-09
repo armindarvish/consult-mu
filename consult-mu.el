@@ -961,6 +961,9 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
                  (unless (one-window-p) (delete-other-windows))
                  ))))
         ('return
+         (save-mark-and-excursion
+           (consult-mu--execute-all-marks)
+           )
          cand)
         ))))
 
@@ -1128,6 +1131,9 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
                  (unless (one-window-p) (delete-other-windows))
                  ))))
         ('return
+         (save-mark-and-excursion
+           (consult-mu--execute-all-marks)
+           )
          cand)
         ))))
 
