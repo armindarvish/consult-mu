@@ -310,11 +310,6 @@ if IGNORE-CASE is non-nil.
       )
 ))))
 
-(defun consult-mu-format-candidate-string (string)
-  (pcase string
-    "%d" 'date
-  ))
-
 (defun consult-mu--format-date (string)
   (let ((string (replace-regexp-in-string " " "0" string)))
     (format "%s %s %s"

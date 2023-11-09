@@ -351,14 +351,7 @@ if IGNORE-CASE is non-nil.
       )
 ))))
 #+end_src
-***** format candidate string
-#+begin_src emacs-lisp
-(defun consult-mu-format-candidate-string (string)
-  (pcase string
-    "%d" 'date
-  ))
 
-#+end_src
 **** format date
 #+begin_src emacs-lisp
 (defun consult-mu--format-date (string)
