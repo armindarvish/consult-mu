@@ -1222,7 +1222,7 @@ INPUT is the query from the user.
 if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
 
   (let* ((query input)
-         (parts (string-split string consult-mu-delimiter))
+         (parts (string-split (replace-regexp-in-string "^\\\\->\s\\|^\\\/->\s" "" string) consult-mu-delimiter))
          (msgid (car parts))
          (date (date-to-time (cadr parts)))
          (sender (cadr (cdr parts)))
@@ -1346,6 +1346,7 @@ BUILDER is the command line builder function (e.g. `consult-mu--async-builder').
     (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
     (if threads (setq opts (append opts (list "--thread"))))
     (if skip-dups (setq opts (append opts (list "--skip-dups"))))
+    (if include-related (setq opts (append opts (list "--include-related"))))
     (unless (or (member "-n" flags) (member "--maxnum" flags))
       (if (> consult-mu-maxnum 0)
           (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
