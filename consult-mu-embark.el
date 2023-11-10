@@ -27,7 +27,7 @@
 
 ;;; Define Embark Action Functions
 (defun consult-mu-embark-default-action (cand)
-  "Open the link in an emacs buffer"
+  "Run `consult-mu-action' on the candidate."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (newcand (cons cand `(:msg ,msg :query ,query))))
@@ -45,7 +45,7 @@
 
 
 (defvar-keymap consult-mu-embark-messages-actions-map
-  :doc "Keymap for consult-mu-embark"
+  :doc "Keymap for consult-mu-embark-messages"
   :parent consult-mu-embark-general-actions-map
   )
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
@@ -97,11 +97,15 @@
 
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
+  "Runs the macro `consult-mu-embark--defun-mark-for' on a list of marks.
+
+This is useful for creating embark functions for all the `mu4e-marks' elements."
   (mapcar (lambda (mark) (eval `(consult-mu-embark--defun-mark-for ,mark))) marks))
 
+;; use consult-mu-embark--defun-func-for-marks to make a function for each `mu4e-marks' element.
 (consult-mu-embark--defun-func-for-marks (mapcar 'car mu4e-marks))
 
-;; add mark keys to keymap
+;; add mark keys to `consult-mu-embark-messages-actions-map' keymap
 (defun consult-mu-embark--add-keys-for-marks (marks)
   (mapcar (lambda (mark)
             (let* ((key (plist-get (cdr mark) :char))
@@ -114,9 +118,8 @@
 
 (consult-mu-embark--add-keys-for-marks mu4e-marks)
 
-;; change the default action
+;; change the default action on `consult-mu-messages' category.
 (add-to-list 'embark-default-action-overrides '(consult-mu-messages . consult-mu-embark-default-action))
-
 
 ;;; Provide `consul-gh-embark' module
 
