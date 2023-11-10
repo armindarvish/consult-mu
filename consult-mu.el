@@ -567,14 +567,40 @@ For example if the user enters the following in the minibuffer:
 
 the `mu4e-search-skip-duplicates' is set to t.
 "
-  (if (member "--skip-dups" opts) t mu4e-search-skip-duplicates))
+  (if (or (member "--skip-dups" opts) mu4e-search-skip-duplicates) t nil))
 
 (defun consult-mu--set-mu4e-results-limit (opts)
+  "Dynamically sets the `mu4e-search-results-limit' based on user input.
+Uses user input (i.e. from `consult-mu' command) to define the maximum number of results.
+
+OPTS is the command line options for mu and can be set by entering options in the minibuffer input. For more details refer to `consult-mu' or `consult-mu-async' documentation.
+
+For example if the user enters the following in the minibuffer:
+ `#query -- --maxnum 400 --sortfield from --reverse --include-related --skip-dups --threads'
+
+the `mu4e-search-results-limit' is set to 400.
+"
     (cond
      ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
      ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
      (t consult-mu-maxnum))
   )
+
+
+(defun consult-mu--set-mu4e-skip-duplicates (opts)
+  "Dynamically sets the `mu4e-search-include-related' based on user input.
+Uses user input (i.e. from `consult-mu' command) to define the include-related property.
+
+OPTS is the command line options for mu and can be set by entering options in the minibuffer input. For more details refer to `consult-mu' or `consult-mu-async' documentation.
+
+For example if the user enters the following in the minibuffer:
+ `#query -- --maxnum 400 --sortfield from --reverse --include-related --skip-dups --threads'
+
+the `mu4e-search-include-related' is set to t.
+"
+  (if (or (member "-r" opts) (member "--include-related" opts) mu4e-search-include-related) t nil))
+
+
 
 (defun consult-mu--set-mu4e-threads (opts)
 "Sets the `mu4e-search-threads' based on `mu4e-search-sort-field'.
@@ -629,6 +655,7 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                        (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
                        (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
                        (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
+                       (mu4e-search-include-related (consult-mu--set-mu4e-skip-duplicates opts))
                       )
             (mu4e--server-find
              rewritten-expr
