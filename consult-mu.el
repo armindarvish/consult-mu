@@ -616,7 +616,7 @@ When the sort-field is :date, then `consult-mu-search-threads' is used. If `cons
 "
 (if (not (equal mu4e-search-sort-field :date)) 'nil (or (member "-t" opts) (member "--threads" opts) consult-mu-search-threads)))
 
-(defun consult-mu--update-headers (query ignore-history msgid)
+(defun consult-mu--update-headers (query ignore-history msg type)
   "Search for QUERY, and updates `consult-mu-headers-buffer-name' buffer.
 
 If IGNORE-HISTORY is true, does *not* update the query history stack, `mu4e--search-query-past'.
@@ -633,6 +633,11 @@ If MSGID is non-nil, put the cursor on message with MSGID.
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
            (mu4e-headers-fields consult-mu-headers-fields)
            )
+      (pcase type
+       (:dynamic )
+       (:async
+        (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
+       (_ ))
       (with-current-buffer buf
         (save-excursion
           (erase-buffer)
@@ -971,7 +976,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                  (consult-mu--expand-headers-template msg consult-mu-headers-template)
                   string)
          )
-         (str (propertize str :msg msg :query query))
+         (str (propertize str :msg msg :query query :type :dynamic))
          )
          (if (and consult-mu-highlight-matches highlight)
                      (cond
@@ -980,7 +985,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                       ((stringp match-str)
                        (setq str (consult-mu--highlight-match match-str str t))))
                    str)
-(cons str (list :msg msg :query query))))
+(cons str (list :msg msg :query query :type :dynamic))))
 
 (defun consult-mu--dynamic-collection (input)
   "Dynamically collects mu4e search results.
@@ -988,7 +993,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
 INPUT is the user input. It is passed as QUERY to `consult-mu--update-headers', appends the result to `consult-mu-headers-buffer-name' and returns the collects list of found messages and returns it as minibuffer completion table.
 "
 (save-excursion
-  (consult-mu--update-headers input nil nil)
+  (consult-mu--update-headers input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
@@ -1159,7 +1164,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                       (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
                       (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face)
                       )))
-         (str (propertize str :msg msg :query query))
+         (str (propertize str :msg msg :query query :type :async))
          )
     (if (and consult-mu-highlight-matches highlight)
         (cond
@@ -1168,7 +1173,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          ((stringp match-str)
           (setq str (consult-mu--highlight-match match-str str t))))
       str)
-    (cons str (list :msg msg :query query))))
+    (cons str (list :msg msg :query query :type :async))))
 
 (defun consult-mu--async-state ()
   "State function for `consult-mu-async' candidates.
@@ -1344,7 +1349,9 @@ Note that this is the async search directly using the commandline `mu` command a
   )
   (let* ((sel
         (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial)
-         ))
+         )
+         (info (cdr sel))
+         (msg (plist-get info :msg)))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
       )
@@ -1352,15 +1359,9 @@ Note that this is the async search directly using the commandline `mu` command a
     (if noaction
         sel
       (progn
-        (let* ((info (cdr sel))
-               (msg (plist-get info :msg))
-               (msgid (substring-no-properties (plist-get msg :message-id)))
-               (query (substring-no-properties (plist-get info :query)))
-               (opts (cdr (consult--command-split query)))
-               (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-        (consult-mu--update-headers query t msgid))
+        (consult-mu--update-headers query t msg :async))
         (funcall consult-mu-action sel)
-        sel))))
+        sel)))
 
 ;;; provide `consult-mu' module
 

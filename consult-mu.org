@@ -677,7 +677,7 @@ When the sort-field is :date, then `consult-mu-search-threads' is used. If `cons
 
 **** update headers
 #+begin_src emacs-lisp
-(defun consult-mu--update-headers (query ignore-history msgid)
+(defun consult-mu--update-headers (query ignore-history msg type)
   "Search for QUERY, and updates `consult-mu-headers-buffer-name' buffer.
 
 If IGNORE-HISTORY is true, does *not* update the query history stack, `mu4e--search-query-past'.
@@ -688,17 +688,27 @@ If MSGID is non-nil, put the cursor on message with MSGID.
 (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
+           (view-buffer (get-buffer consult-mu-view-buffer-name))
            (inhibit-read-only t)
            (expr (car (consult--command-split query)))
            (rewritten-expr (funcall mu4e-query-rewrite-function expr))
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
            (mu4e-headers-fields consult-mu-headers-fields)
            )
+      (pcase type
+       (:dynamic )
+       (:async
+        (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
+       (_ ))
+
+
       (with-current-buffer buf
         (save-excursion
           (erase-buffer)
           (mu4e-headers-mode)
           (setq-local mu4e-view-buffer-name consult-mu-view-buffer-name)
+          (if view-buffer
+              (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
           (unless ignore-history
             ; save the old present query to the history list
             (when mu4e--search-last-query
@@ -1010,6 +1020,7 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
   (let ((msgid (plist-get msg :message-id)))
     (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
       (with-current-buffer buf
+        ;;(mu4e-headers-mode)
         (goto-char (point-min))
         (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
         (unless noselect
@@ -1046,14 +1057,59 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
 
   (let* ((info (cdr cand))
          (msg (plist-get info :msg))
-         (query (substring-no-properties (plist-get info :query)))
          (match-str (car (consult--command-split query)))
          )
     (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     ))
 #+end_src
+******
+****** reply to message
+#+begin_src emacs-lisp
 
+(defun consult-mu--reply (msg)
+  "Opens MSG in `consult-mu-headers' and `consult-mu-view'.
+
+If NOSELECT is non-nil, does not select the view buffer/window.
+
+If MARK-AS-READ is non-nil, marks the MSG as read.
+
+If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
+"
+  (let ((msgid (plist-get msg :message-id)))
+    (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
+      (with-current-buffer buf
+        ;;(mu4e-headers-mode)
+        (goto-char (point-min))
+        (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
+        ))
+
+
+    (with-current-buffer consult-mu-headers-buffer-name
+      (mu4e-headers-goto-message-id msgid)
+      (if mark-as-read
+          (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N"))
+      )
+
+    (when match-str
+      (add-to-history 'search-ring match-str)
+      (consult-mu--overlay-match match-str consult-mu-view-buffer-name t))
+
+    (with-current-buffer consult-mu-view-buffer-name
+      (goto-char (point-min)))
+
+    (unless noselect
+      (select-window (get-buffer-window consult-mu-view-buffer-name)))
+
+    consult-mu-view-buffer-name))
+
+(defun consult-mu--reply-action (cand)
+  (let* ((info (cdr cand))
+         (msg (plist-get info :msg))
+         (query (substring-no-properties (plist-get info :query)))
+         (match-str (car (consult--command-split query)))
+         )
+#+end_src
 ** Frontend Interactive Commands
 **** consult-mu (dynamic collection)
 ***** format candidate
@@ -1074,7 +1130,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                  (consult-mu--expand-headers-template msg consult-mu-headers-template)
                   string)
          )
-         (str (propertize str :msg msg :query query))
+         (str (propertize str :msg msg :query query :type :dynamic))
          )
          (if (and consult-mu-highlight-matches highlight)
                      (cond
@@ -1083,7 +1139,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                       ((stringp match-str)
                        (setq str (consult-mu--highlight-match match-str str t))))
                    str)
-(cons str (list :msg msg :query query))))
+(cons str (list :msg msg :query query :type :dynamic))))
 #+end_src
 
 ***** dynamic collection
@@ -1094,7 +1150,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
 INPUT is the user input. It is passed as QUERY to `consult-mu--update-headers', appends the result to `consult-mu-headers-buffer-name' and returns the collects list of found messages and returns it as minibuffer completion table.
 "
 (save-excursion
-  (consult-mu--update-headers input nil nil)
+  (consult-mu--update-headers input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
@@ -1279,7 +1335,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                       (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
                       (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face)
                       )))
-         (str (propertize str :msg msg :query query))
+         (str (propertize str :msg msg :query query :type :async))
          )
     (if (and consult-mu-highlight-matches highlight)
         (cond
@@ -1288,7 +1344,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          ((stringp match-str)
           (setq str (consult-mu--highlight-match match-str str t))))
       str)
-    (cons str (list :msg msg :query query))))
+    (cons str (list :msg msg :query query :type :async))))
 #+end_src
 
 
@@ -1484,7 +1540,10 @@ Note that this is the async search directly using the commandline `mu` command a
   )
   (let* ((sel
         (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial)
-         ))
+         )
+         (info (cdr sel))
+         (msg (plist-get info :msg))
+         (query (plist-get info :query)))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
       )
@@ -1492,15 +1551,9 @@ Note that this is the async search directly using the commandline `mu` command a
     (if noaction
         sel
       (progn
-        (let* ((info (cdr sel))
-               (msg (plist-get info :msg))
-               (msgid (substring-no-properties (plist-get msg :message-id)))
-               (query (substring-no-properties (plist-get info :query)))
-               (opts (cdr (consult--command-split query)))
-               (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-        (consult-mu--update-headers query t msgid))
+        (consult-mu--update-headers query t msg :async))
         (funcall consult-mu-action sel)
-        sel))))
+        sel)))
 #+end_src
 
 
@@ -1547,7 +1600,7 @@ This section includes additional useful embark actions as well as possible keyma
 (require 'consult-mu)
 
 ;;; Customization Variables
-(defcustom consult-mu-embark-noconfirm-before-exxecute nil
+(defcustom consult-mu-embark-noconfirm-before-execute nil
   "Should consult-mu-embark skip confirmation when executing marks?"
   :group 'consult-mu
   :type 'boolean
@@ -1558,9 +1611,145 @@ This section includes additional useful embark actions as well as possible keyma
   "Run `consult-mu-action' on the candidate."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
-         (newcand (cons cand `(:msg ,msg :query ,query))))
-    (funcall consult-mu-action newcand)
-    ))
+         (type (get-text-property 0 :type cand))
+         (newcand (cons cand `(:msg ,msg :query ,query :type ,type))))
+    (if (equal type :async)
+        (consult-mu--update-headers query t msg :async)
+      )
+    (funcall consult-mu-action newcand))
+  )
+
+;; (defun consult-mu-embark-reply (cand)
+;;   "Reply to message in CAND."
+;;   (let* ((msg (get-text-property 0 :msg cand))
+;;          (msgid (plist-get msg  :message-id))
+;;          (query (get-text-property 0 :query cand))
+;;          (buf (get-buffer consult-mu-headers-buffer-name))
+;;          )
+;;     (if buf
+;;         (progn
+;;           (with-current-buffer buf
+;;             (if (eq major-mode 'mu4e-headers-mode)
+;;                 (progn
+;;                   (goto-char (point-min))
+;;                   (mu4e-headers-goto-message-id msgid)
+;;                   (if (equal (mu4e-message-field-at-point :message-id) msgid)
+;;                       (mu4e-compose-reply)
+;;                     (progn
+;;                       (let* ((opts (cdr (consult--command-split query)))
+;;                              (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+;;                         (consult-mu--update-headers query t msgid))
+;;                       (with-current-buffer buf
+;;                         (goto-char (point-min))
+;;                         (mu4e-headers-goto-message-id msgid)
+;;                         (if (equal (mu4e-message-field-at-point :message-id) msgid)
+;;                             (mu4e-compose-reply))))))
+;;               (progn
+;;                 (let* ((opts (cdr (consult--command-split query)))
+;;                        (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+;;                   (consult-mu--update-headers query t msgid))
+;;                 (with-current-buffer buf
+;;                   (goto-char (point-min))
+;;                   (mu4e-headers-goto-message-id msgid)
+;;                   (if (equal (mu4e-message-field-at-point :message-id) msgid)
+;;                       (mu4e-compose-reply)))))
+;;             )
+;;           )
+;;       (mu4e-update-index-nonlazy)
+;;       )))
+
+(defun consult-mu-embark-reply (cand)
+  "Reply to message in CAND."
+  (save-mark-and-excursion
+    (let* ((msg (get-text-property 0 :msg cand))
+           (query (get-text-property 0 :query cand))
+           (type (get-text-property 0 :type cand))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type))))
+      (if (equal type :async)
+          (consult-mu--update-headers query t msg :async)
+        )
+      ;;(funcall consult-mu-action newcand)
+      (with-current-buffer consult-mu-headers-buffer-name
+        (unless (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+          (mu4e-headers-goto-message-id))
+        (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+            (progn
+              (mu4e-compose-reply)
+              (mu4e~headers-update-handler msg nil nil)
+              )
+        ))
+
+      (with-current-buffer consult-mu-view-buffer-name
+        (quit-window)
+        )
+      )))
+
+(defun consult-mu-embark-forward (cand)
+  "Reply to message in CAND."
+  (save-mark-and-excursion
+    (let* ((msg (get-text-property 0 :msg cand))
+           (query (get-text-property 0 :query cand))
+           (type (get-text-property 0 :type cand))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type))))
+      (if (equal type :async)
+          (consult-mu--update-headers query t msg :async)
+        )
+      ;;(funcall consult-mu-action newcand)
+      (with-current-buffer consult-mu-headers-buffer-name
+        (unless (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+          (mu4e-headers-goto-message-id))
+        (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+            (progn
+              (mu4e-compose-forward)
+              (mu4e~headers-update-handler msg nil nil)
+              )
+        ))
+
+      (with-current-buffer consult-mu-view-buffer-name
+        (quit-window)
+        )
+      )))
+
+;; (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler)
+;;            ((symbol-function #'mu4e-view) #'consult-mu--view-msg)
+;;            ((symbol-function #'mu4e~set-sent-handler-message-sent-hook-fn) (lambda ())))
+;;   (save-excursion
+;;     (let* ((msg (get-text-property 0 :msg cand))
+;;            (msgid (plist-get msg  :message-id))
+;;            (query (get-text-property 0 :query cand))
+;;            (buf (get-buffer consult-mu-headers-buffer-name))
+;;            )
+;;       (if buf
+;;           (prog
+;;             (with-current-buffer buf
+;;               (if (eq major-mode 'mu4e-headers-mode)
+;;                   (progn
+;;                     (goto-char (point-min))
+;;                     (mu4e-headers-goto-message-id msgid)
+;;                     (if (equal (mu4e-message-field-at-point :message-id) msgid)
+;;                         (mu4e-compose-forward)
+;;                       (progn
+;;                         (let* ((opts (cdr (consult--command-split query)))
+;;                                (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+;;                           (consult-mu--update-headers query t msgid))
+;;                         (with-current-buffer buf
+;;                           (goto-char (point-min))
+;;                           (mu4e-headers-goto-message-id msgid)
+;;                           (if (equal (mu4e-message-field-at-point :message-id) msgid)
+;;                               (mu4e-compose-forward))))))
+;;                 (progn
+;;                   (let* ((opts (cdr (consult--command-split query)))
+;;                          (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
+;;                     (consult-mu--update-headers query t msgid))
+;;                   (with-current-buffer buf
+;;                     (goto-char (point-min))
+;;                     (mu4e-headers-goto-message-id msgid)
+;;                     (if (equal (mu4e-message-field-at-point :message-id) msgid)
+;;                         (mu4e-compose-forward)))))
+;;               )
+
+;;             )
+;;         )))))
 
 ;;; Define Embark Keymaps
 
@@ -1575,6 +1764,8 @@ This section includes additional useful embark actions as well as possible keyma
 (defvar-keymap consult-mu-embark-messages-actions-map
   :doc "Keymap for consult-mu-embark-messages"
   :parent consult-mu-embark-general-actions-map
+  "r" #'consult-mu-embark-reply
+  "f" #'consult-mu-embark-forward
   )
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
 
@@ -1600,18 +1791,14 @@ This section includes additional useful embark actions as well as possible keyma
                               (if (equal (mu4e-message-field-at-point :message-id) msgid)
                                   (mu4e-headers-mark-and-next ',mark)
                                 (progn
-                                  (let* ((opts (cdr (consult--command-split query)))
-                                         (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-                                    (consult-mu--update-headers query t msgid))
+                                  (consult-mu--update-headers query t msg :async)
                                   (with-current-buffer buf
                                     (goto-char (point-min))
                                     (mu4e-headers-goto-message-id msgid)
                                     (if (equal (mu4e-message-field-at-point :message-id) msgid)
                                         (mu4e-headers-mark-and-next ',mark))))))
                           (progn
-                            (let* ((opts (cdr (consult--command-split query)))
-                                   (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-                              (consult-mu--update-headers query t msgid))
+                            (consult-mu--update-headers query t msg :async)
                             (with-current-buffer buf
                               (goto-char (point-min))
                               (mu4e-headers-goto-message-id msgid)
