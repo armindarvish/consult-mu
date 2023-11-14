@@ -256,8 +256,7 @@ For example in the screenshot below, I am searching for the term =consult-gh= an
 #+attr_org: :width 800px :height nilpx
 #+attr_latex: :width 800px :height nilpx
 #+attr_html: :width 800px :height nilpx
-[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-minibuffer.png
-]]
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-minibuffer.png]]
 
 Furthermore if I look at a preview, all the instances of consult-gh matches in the preview buffer are also highlighted:
 
