@@ -567,14 +567,40 @@ For example if the user enters the following in the minibuffer:
 
 the `mu4e-search-skip-duplicates' is set to t.
 "
-  (if (member "--skip-dups" opts) t mu4e-search-skip-duplicates))
+  (if (or (member "--skip-dups" opts) mu4e-search-skip-duplicates) t nil))
 
 (defun consult-mu--set-mu4e-results-limit (opts)
+  "Dynamically sets the `mu4e-search-results-limit' based on user input.
+Uses user input (i.e. from `consult-mu' command) to define the maximum number of results.
+
+OPTS is the command line options for mu and can be set by entering options in the minibuffer input. For more details refer to `consult-mu' or `consult-mu-async' documentation.
+
+For example if the user enters the following in the minibuffer:
+ `#query -- --maxnum 400 --sortfield from --reverse --include-related --skip-dups --threads'
+
+the `mu4e-search-results-limit' is set to 400.
+"
     (cond
      ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
      ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
      (t consult-mu-maxnum))
   )
+
+
+(defun consult-mu--set-mu4e-skip-duplicates (opts)
+  "Dynamically sets the `mu4e-search-include-related' based on user input.
+Uses user input (i.e. from `consult-mu' command) to define the include-related property.
+
+OPTS is the command line options for mu and can be set by entering options in the minibuffer input. For more details refer to `consult-mu' or `consult-mu-async' documentation.
+
+For example if the user enters the following in the minibuffer:
+ `#query -- --maxnum 400 --sortfield from --reverse --include-related --skip-dups --threads'
+
+the `mu4e-search-include-related' is set to t.
+"
+  (if (or (member "-r" opts) (member "--include-related" opts) mu4e-search-include-related) t nil))
+
+
 
 (defun consult-mu--set-mu4e-threads (opts)
 "Sets the `mu4e-search-threads' based on `mu4e-search-sort-field'.
@@ -590,7 +616,7 @@ When the sort-field is :date, then `consult-mu-search-threads' is used. If `cons
 "
 (if (not (equal mu4e-search-sort-field :date)) 'nil (or (member "-t" opts) (member "--threads" opts) consult-mu-search-threads)))
 
-(defun consult-mu--update-headers (query ignore-history msgid)
+(defun consult-mu--update-headers (query ignore-history msg type)
   "Search for QUERY, and updates `consult-mu-headers-buffer-name' buffer.
 
 If IGNORE-HISTORY is true, does *not* update the query history stack, `mu4e--search-query-past'.
@@ -607,6 +633,11 @@ If MSGID is non-nil, put the cursor on message with MSGID.
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
            (mu4e-headers-fields consult-mu-headers-fields)
            )
+      (pcase type
+       (:dynamic )
+       (:async
+        (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
+       (_ ))
       (with-current-buffer buf
         (save-excursion
           (erase-buffer)
@@ -629,6 +660,7 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                        (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
                        (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
                        (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
+                       (mu4e-search-include-related (consult-mu--set-mu4e-skip-duplicates opts))
                       )
             (mu4e--server-find
              rewritten-expr
@@ -944,7 +976,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                  (consult-mu--expand-headers-template msg consult-mu-headers-template)
                   string)
          )
-         (str (propertize str :msg msg :query query))
+         (str (propertize str :msg msg :query query :type :dynamic))
          )
          (if (and consult-mu-highlight-matches highlight)
                      (cond
@@ -953,7 +985,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                       ((stringp match-str)
                        (setq str (consult-mu--highlight-match match-str str t))))
                    str)
-(cons str (list :msg msg :query query))))
+(cons str (list :msg msg :query query :type :dynamic))))
 
 (defun consult-mu--dynamic-collection (input)
   "Dynamically collects mu4e search results.
@@ -961,7 +993,7 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
 INPUT is the user input. It is passed as QUERY to `consult-mu--update-headers', appends the result to `consult-mu-headers-buffer-name' and returns the collects list of found messages and returns it as minibuffer completion table.
 "
 (save-excursion
-  (consult-mu--update-headers input nil nil)
+  (consult-mu--update-headers input nil nil :dynamic)
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
@@ -1102,7 +1134,7 @@ INPUT is the query from the user.
 if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
 
   (let* ((query input)
-         (parts (string-split string consult-mu-delimiter))
+         (parts (string-split (replace-regexp-in-string "^\\\\->\s\\|^\\\/->\s" "" string) consult-mu-delimiter))
          (msgid (car parts))
          (date (date-to-time (cadr parts)))
          (sender (cadr (cdr parts)))
@@ -1132,7 +1164,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                       (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
                       (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face)
                       )))
-         (str (propertize str :msg msg :query query))
+         (str (propertize str :msg msg :query query :type :async))
          )
     (if (and consult-mu-highlight-matches highlight)
         (cond
@@ -1141,7 +1173,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          ((stringp match-str)
           (setq str (consult-mu--highlight-match match-str str t))))
       str)
-    (cons str (list :msg msg :query query))))
+    (cons str (list :msg msg :query query :type :async))))
 
 (defun consult-mu--async-state ()
   "State function for `consult-mu-async' candidates.
@@ -1214,6 +1246,7 @@ BUILDER is the command line builder function (e.g. `consult-mu--async-builder').
     (setq opts (append opts (list "--sortfield" (substring (symbol-name consult-mu-search-sort-field) 1)))))
     (if threads (setq opts (append opts (list "--thread"))))
     (if skip-dups (setq opts (append opts (list "--skip-dups"))))
+    (if include-related (setq opts (append opts (list "--include-related"))))
     (unless (or (member "-n" flags) (member "--maxnum" flags))
       (if (> consult-mu-maxnum 0)
           (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
@@ -1316,7 +1349,9 @@ Note that this is the async search directly using the commandline `mu` command a
   )
   (let* ((sel
         (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial)
-         ))
+         )
+         (info (cdr sel))
+         (msg (plist-get info :msg)))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
       )
@@ -1324,15 +1359,9 @@ Note that this is the async search directly using the commandline `mu` command a
     (if noaction
         sel
       (progn
-        (let* ((info (cdr sel))
-               (msg (plist-get info :msg))
-               (msgid (substring-no-properties (plist-get msg :message-id)))
-               (query (substring-no-properties (plist-get info :query)))
-               (opts (cdr (consult--command-split query)))
-               (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-        (consult-mu--update-headers query t msgid))
+        (consult-mu--update-headers query t msg :async))
         (funcall consult-mu-action sel)
-        sel))))
+        sel)))
 
 ;;; provide `consult-mu' module
 
