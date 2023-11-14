@@ -268,16 +268,18 @@ Furthermore if I look at a preview, all the instances of consult-gh matches in t
 
 Note that when the candidate is selected (i.e. by pressing =RET=), the highlight overlay is turned off, so you can see the orignial message as is, but you can call =consult-mu-overlays-toggle= (i.e. =M-x consult-mu-overlays-toggle=) to see the highlights of the query again.
 
-#+CAPTION[highlight is on]: higlhights are turned back on by =M-x consult-mu-overlays-toggle=.
+
 #+attr_org: :width 350px :height nilpx
 #+attr_latex: :width 350px :height nilpx
 #+attr_html: :width 350px :height nilpx
+#+CAPTION: When Message is viewed highlight overlays are turned off.
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view-off.png]]
 
 
 #+attr_org: :width 200px :height nilpx
 #+attr_latex: :width 200px :height nilpx
 #+attr_html: :width 200px :height nilpx
+#+CAPTION: higlhights are turned back on by =M-x consult-mu-overlays-toggle=.
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view-on.png]]
 
 
