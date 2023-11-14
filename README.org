@@ -125,7 +125,7 @@ Maximum number of messages shown in search results (in consult-mu minibuffer com
 
 
 **** =consult-mu-search-sort-field=
-This defines the field that is used for sorting the results. It has to be one of the keywords:
+This defines the field that is used for sorting the results (refer to documentation on the variable =mu4e-search-sort-field= for more info). It has to be one of the keywords:
 - =:date=  sort by date
 - =:subject= sort by title of the email
 - =:size= sort by file size
@@ -134,7 +134,14 @@ This defines the field that is used for sorting the results. It has to be one of
 - =:to= sort by name/email of receivers
 - =:list= sort by mailing list
 
-For more information refer to documentation on the variable =mu4e-search-sort-field=.
+
+Note that the sort field can dynamically be changed by providing command line arguments in the minibuffer input.
+
+For example the following input in the minibuffer will search for emails that are flagged unread but then overrides the sort field and change it t =subject=. For details on how to use command line arguments refer to mu  manual (e.g. by running =mu find --help= in the command line)
+
+#+begin_example
+#flag:unread -- -s s
+#+end_example
 
 **** =consult-mu-headers-fields=
 This variable is used to format the headers inside minibuffer. This takes a similar format to =mu4e-headers-fields= and changes the format of the header only in minibuffer (=consult-mu= or =consult-mu-async=).
@@ -161,19 +168,9 @@ The list of available fields are:
   %h  bcc (i.e. bcc: field of the email)
   %r  date chaged (as defined by :changed in mu4e)
 
-For example, the string ="%d13%s50%f17"= would make a header containing =13= characters for =date=, =50= characters for =subject=, and =20= characters for =from= field, making a header that looks like this:
+For example, the string ="%d13%s50%f17"= would make a header containing =13= characters for =date=, =50= characters for =subject=, and =20= characters for =from= field, making headers that looks like this:
 
-#+begin_example
-Thu 09 Nov 23  Title of the Email Limited to 50 Characters Onl...  example@domain...
-#+end_example
 
-Note that the sort field can dynamically be changed by providing command line arguments in the minibuffer input.
-
-For example the following input in the minibuffer will search for emails that are flagged unread but then overrides the sort field and change it t =subject=. For details on how to use command line arguments refer to mu  manual (e.g. by running =mu find --help= in the command line)
-
-#+begin_example
-#flag:unread -- -s s
-#+end_example
 
 **** =consult-mu-search-sort-direction=
 Direction of sort. It can either be ='ascending= for A->Z (low number to high number) or ='descending= for Z->A (high number to low number). Note that if a command line argument for reverse order (either -z or --reverse) is provided in the minibuffer, the order will be reverse of the setting defined by this variable.
@@ -201,26 +198,24 @@ When this variable is set to nil, it can still be truned on by adding command li
 **** =consult-mu-group-by=
 This variable determines what field is used to group messages. This aloows quick movement between groups (For example with =vertico-next-group= if you use [[https://github.com/minad/vertico][vertico]])
 
-By default it is set to :date. But can be any of the following:
+By default it is set to :date. But can be any of the following keywords:
 
-  - :subject      group by mail title
-  - :from         group by name/email of the sender(s)
-  - :to           group by name/email of the receiver(s)
-  - :date         group by date in the format "Thu 09 Nov 23"
-  - :time         group by the time of email in the format "20:30:07"
-  - :datetime     group by date and time of the email with the format "2023-11-04 08:30:07 PM"
-  - :year         group by the year of the email (i.e. 2023, 2022, ...)
-  - :month        group by the month of the email (i.e. Jan, Feb, ..., Dec)
-  - :week         group by the week number of the email (.i.e. 1, 2, 3, ..., 52)
-  - :day-of-week  group by the day email was sent (i.e. Monday, Tuesday, ...)
-  - :size         group by the file size of the email
-  - :flags        group by flags (as defined by mu)
-  - :tags         group by tags (as defined by mu)
-  - :changed      group by the date changed (as defined by :changed field in mu4e)
+  - =:subject=      group by mail title
+  - =:from=         group by name/email of the sender(s)
+  - =:to=           group by name/email of the receiver(s)
+  - =:date=         group by date in the format "Thu 09 Nov 23"
+  - =:time=         group by the time of email in the format "20:30:07"
+  - =:datetime=     group by date and time of the email with the format "2023-11-04 08:30:07 PM"
+  - =:year=         group by the year of the email (i.e. 2023, 2022, ...)
+  - =:month=        group by the month of the email (i.e. Jan, Feb, ..., Dec)
+  - =:week=         group by the week number of the email (.i.e. 1, 2, 3, ..., 52)
+  - =:day-of-week=  group by the day email was sent (i.e. Monday, Tuesday, ...)
+  - =:size=         group by the file size of the email
+  - =:flags=        group by flags (as defined by mu)
+  - =:tags=         group by tags (as defined by mu)
+  - =:changed=      group by the date changed (as defined by :changed field in mu4e)
 
-Note that grouping works alongside sorting. For example if  =consult-mu-group-by= is set to =:day-of-week= and =consult-mu-search-sort-field= is set to =:date=, then the messages are grouped by day of week (e.g. all emails on Tuesdays will be in one group) then ordered chronologically within each group.
-
-Here is a screenshot of some examples:
+Note that grouping works alongside sorting. For example if  =consult-mu-group-by= is set to =:day-of-week= and =consult-mu-search-sort-field= is set to =:date=, then the messages are grouped by day of week (e.g. all emails on Tuesdays will be in one group) then ordered chronologically within each group. The screenshot below shows some examples:
 #+attr_org: :width 800px :height nilpx
 #+attr_latex: :width 800px :height nilpx
 #+attr_html: :width 800px :height nilpx
