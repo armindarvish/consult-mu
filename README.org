@@ -256,7 +256,8 @@ For example in the screenshot below, I am searching for the term =consult-gh= an
 #+attr_org: :width 800px :height nilpx
 #+attr_latex: :width 800px :height nilpx
 #+attr_html: :width 800px :height nilpx
-[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-minibuffer.png]][[file:../../Pictures/2023-11-14_09-48-43_screenshot.png]]
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-minibuffer.png
+]]
 
 Furthermore if I look at a preview, all the instances of consult-gh matches in the preview buffer are also highlighted:
 
@@ -267,15 +268,10 @@ Furthermore if I look at a preview, all the instances of consult-gh matches in t
 
 Note that when the candidate is selected (i.e. by pressing =RET=), the highlight overlay is turned off, so you can see the orignial message as is, but you can call =consult-mu-overlays-toggle= (i.e. =M-x consult-mu-overlays-toggle=) to see the highlights of the query again.
 
-
 #+attr_org: :width 350px :height nilpx
 #+attr_latex: :width 350px :height nilpx
 #+attr_html: :width 350px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view.png]]
-
-*caption*:
-Left - when Message is viewed highlight overlays are turned off. Right - higlhights are turned back on by =M-x consult-mu-overlays-toggle=.
-
 
 **** =consult-mu-action=
 This variable stores the function that is called when a message is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu--view-action= which opens both the headers buffer and view buffer and shows the content of the selected message.
