@@ -154,7 +154,6 @@ For example, the string ="%d13%s50%f17%G"= would make a header containing =13= c
 #+attr_html: :width 800px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-headers-template.png]]
 
-
 **** =consult-mu-search-sort-field=
 This defines the field that is used for sorting the results (refer to documentation on the variable =mu4e-search-sort-field= for more info). It has to be one of the keywords:
 - =:date=  sort by date
