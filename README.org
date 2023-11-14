@@ -28,14 +28,13 @@ While mu4e built-in search is great and provides ways to edit search terms (e.g.
 Both [[https://github.com/seanfarley/counsel-mu][counsel-mu]] and [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]] inspired this package. But this package provides soemthing more than those packages. Here is the comparison:
 
 - [[https://github.com/seanfarley/counsel-mu][counsel-mu]]: counsel-mu provides an async search for mu, and when the candidate is selected, the single message is loaded by using =mu4e-view-message-with-message-id=. =consult-mu= takes a similar approach in =consult-mu-async= but expands on that with the following features:
+  a. ability to dynamically add command line options (e.g. using =query -- -s s -z= as input).
+     This includes dynamically changing the number of results. This is important because with counsel-mu, one ha to change the variable =mu4e-search-results-limit= globally to see many results, which then affects every mu4e-search that is done.
+  b. ability to load a preview without leaving minibuffer search
+  d. ability to use emabrk actions on candidates from the minibuffer with =consult-mu-embark=
+  c. ability to see whole threads when selecting a candidate rather than just single messages
 
-a. ability to dynamically add command line options (e.g. using =query -- -s s -z= as input).
-This includes dynamically changing the number of results. This is important because with counsel-mu, one ha to change the variable =mu4e-search-results-limit= globally to see many results, which then affects every mu4e-search that is done.
-b. ability to load a preview without leaving minibuffer search
-d. ability to use emabrk actions on candidates from the minibuffer with =consult-mu-embark=
-c. ability to see whole threads when selecting a candidate rather than just single messages
-
-In addition, =consult-mu= provides the =consult-mu= interactive command that uses dynamic collection using =mu4e-search= (and not =mu= commands). This allows doing dynamic search in the minibuffer and then getting a full list of results similar to the built-in mu4e-search.
+  In addition, =consult-mu= provides the =consult-mu= interactive command that uses dynamic collection using =mu4e-search= (and not =mu= commands). This allows doing dynamic search in the minibuffer and then getting a full list of results similar to the built-in mu4e-search.
 
 
 - [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]]: consult-notmuch is great IF you use [[https://notmuchmail.org/notmuch-emacs/][notmuch-emacs]]. consult-mu on the other hand provides similar functionality for [[https://github.com/djcb/mu][mu/mu4e]].
