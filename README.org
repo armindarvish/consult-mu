@@ -123,26 +123,6 @@ Maximum number of messages shown in search results (in consult-mu minibuffer com
 #github -- --maxnum 1000
 #+end_example
 
-
-**** =consult-mu-search-sort-field=
-This defines the field that is used for sorting the results (refer to documentation on the variable =mu4e-search-sort-field= for more info). It has to be one of the keywords:
-- =:date=  sort by date
-- =:subject= sort by title of the email
-- =:size= sort by file size
-- =:prio= sort by priority
-- =:from= sort by name/email of the sender(s)
-- =:to= sort by name/email of receivers
-- =:list= sort by mailing list
-
-
-Note that the sort field can dynamically be changed by providing command line arguments in the minibuffer input.
-
-For example the following input in the minibuffer will search for emails that are flagged unread but then overrides the sort field and change it t =subject=. For details on how to use command line arguments refer to mu  manual (e.g. by running =mu find --help= in the command line)
-
-#+begin_example
-#flag:unread -- -s s
-#+end_example
-
 **** =consult-mu-headers-fields=
 This variable is used to format the headers inside minibuffer. This takes a similar format to =mu4e-headers-fields= and changes the format of the header only in minibuffer (=consult-mu= or =consult-mu-async=).
 
@@ -168,9 +148,31 @@ The list of available fields are:
   %h  bcc (i.e. bcc: field of the email)
   %r  date chaged (as defined by :changed in mu4e)
 
-For example, the string ="%d13%s50%f17"= would make a header containing =13= characters for =date=, =50= characters for =subject=, and =20= characters for =from= field, making headers that looks like this:
+For example, the string ="%d13%s50%f17%G"= would make a header containing =13= characters for =date=, =50= characters for =subject=, and =20= characters for =from= field, making headers that looks like this:
+#+attr_org: :width 800px :height nilpx
+#+attr_latex: :width 800px :height nilpx
+#+attr_html: :width 800px :height nilpx
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-headers-template.png]]
 
 
+**** =consult-mu-search-sort-field=
+This defines the field that is used for sorting the results (refer to documentation on the variable =mu4e-search-sort-field= for more info). It has to be one of the keywords:
+- =:date=  sort by date
+- =:subject= sort by title of the email
+- =:size= sort by file size
+- =:prio= sort by priority
+- =:from= sort by name/email of the sender(s)
+- =:to= sort by name/email of receivers
+- =:list= sort by mailing list
+
+
+Note that the sort field can dynamically be changed by providing command line arguments in the minibuffer input.
+
+For example the following input in the minibuffer will search for emails that are flagged unread but then overrides the sort field and change it t =subject=. For details on how to use command line arguments refer to mu  manual (e.g. by running =mu find --help= in the command line)
+
+#+begin_example
+#flag:unread -- -s s
+#+end_example
 
 **** =consult-mu-search-sort-direction=
 Direction of sort. It can either be ='ascending= for A->Z (low number to high number) or ='descending= for Z->A (high number to low number). Note that if a command line argument for reverse order (either -z or --reverse) is provided in the minibuffer, the order will be reverse of the setting defined by this variable.
@@ -252,26 +254,24 @@ This variable determines if consult-mu highlights search queries in minibuffer o
 
 When it is set to t, all matches of the search term are highlighted in the minibuffer allowing you to notice why the email is a search hit.
 
-For example in the screenshot below, I am searching for the term =consult-gh= and all the matches of consult-gh are highlighted in the titles.
-
+For example in the screenshot below, I am searching for the term =consult= and all the matches of consult are highlighted in the titles.
 #+attr_org: :width 800px :height nilpx
 #+attr_latex: :width 800px :height nilpx
 #+attr_html: :width 800px :height nilpx
-[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-minibuffer.png]]
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-highlight-matches-minibuffer.png]]
+
 
 Furthermore if I look at a preview, all the instances of consult-gh matches in the preview buffer are also highlighted:
-
 #+attr_org: :width 800px :height nilpx
 #+attr_latex: :width 800px :height nilpx
 #+attr_html: :width 800px :height nilpx
-[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-preview.png]]
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-highlight-matches-preview.png]]
 
 Note that when the candidate is selected (i.e. by pressing =RET=), the highlight overlay is turned off, so you can see the orignial message as is, but you can call =consult-mu-overlays-toggle= (i.e. =M-x consult-mu-overlays-toggle=) to see the highlights of the query again.
-
 #+attr_org: :width 800px :height nilpx
 #+attr_latex: :width 800px :height nilpx
 #+attr_html: :width 800px :height nilpx
-[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view.png]]
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-highlight-matches-view.png]]
 
 **** =consult-mu-action=
 This variable stores the function that is called when a message is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu--view-action= which opens both the headers buffer and view buffer and shows the content of the selected message.
