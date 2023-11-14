@@ -1,7 +1,7 @@
 #+include: ~/OrgFiles/armin/org-macros.setup
 #+OPTIONS: h:1 num:nil toc:nil d:nil
 
-#+TITLE: consult-mu - use [[https://github.com/minad/consult][consult]] asynchronously to search mu4e emails in the minibuffer
+#+TITLE: consult-mu - use consult to search mu4e dynamically or asynchronously
 #+AUTHOR: Armin Darvish
 #+LANGUAGE: en
 
@@ -41,7 +41,18 @@ In order to use consult-mu, you need the following requirements:
 
 **** [[https://github.com/djcb/mu][mu4e]]:
 
+You can access the official documentation for mu4e here: [[https://www.djcbsoftware.nl/code/mu/mu4e/][mu4e official manual]]. If you need step-by-step instructions or prefer videos, there are many useful tutorials online.  Here are a few good links:
+
+- EmacsWiki: [[https://www.emacswiki.org/emacs/mu4e][EmacsWiki: mu4e]]
+- SystemCrafters Videos: [[https://www.youtube.com/watch?v=yZRyEhi4y44][Streamline Your E-mail Management with mu4e - Emacs Mail - YouTube]] & [[https://www.youtube.com/watch?v=olXpfaSnf0o][Managing Multiple Email Accounts with mu4e and mbsync - Emacs Mail - YouTube]]
+- Setting Mu4e on MacOS: [[https://macowners.club/posts/email-emacs-mu4e-macos/][Email setup in Emacs with Mu4e on macOS | macOS & (open-source) Software]]
+
 **** [[https://github.com/minad/consult][consult]]:
+
+To install consult follow the official instructions here: [[https://github.com/minad/consult#configuration][Configuration of Consult.]]
+
+Also, make sure you review Consult's README since it recommends some other packages and useful configurations for different settings. Some of those may improve your experience of consult-mu as well. In particular the section about [[https://github.com/minad/consult#asynchronous-search][asynchronous search]] is important for learning how to use inputs to search for result and narrow down in minibuffer.
+
 
 *** Installing consult-mu package
 Consult-mu is not currently on [[https://elpa.gnu.org/packages/consult.html][ELPA]] or [[https://melpa.org/#/consult][MELPA]]. Therefore, you need to install it using an alternative non-standard package managers such as [[https://github.com/radian-software/straight.el][straight.el]] or use manual installation.
@@ -96,11 +107,19 @@ I recommend you read through this section and understand how to configure the pa
 *** Customization
 The following customizable variables are provided:
 
-*** =consult-mu-headers-buffer-name=
+**** =consult-mu-headers-buffer-name=
+This is the default name for HEADERS buffer explicitly for consult-mu. It is, by default, set to ="**consult-mu-headers**"=. Note that currently, the header-buffer name is a constant string and shared between all instances of consult-mu calls. This is to prevent running operations in parallel that cause out-of-sync issues.
 
 **** =consult-mu-args=
+This is the default name of the =mu= command line argument. It is set to ="mu"= by default, but can be modified for example if mu is at a different path on your system.
 
 **** =consult-mu-maxnum=
+Maximum number of messages shown in search results (in consult-mu minibuffer completion table). This is a global option for consult-mu and consult-mu-async, but can be overriden by providing command line arguments in input for example, the following search would fetch up to 1000 results
+
+#+begin_example
+#github -- --maxnum 1000
+#+end_example
+
 
 **** =consult-mu-search-sort-field=
 
