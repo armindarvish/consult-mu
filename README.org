@@ -1,7 +1,7 @@
 #+include: ~/OrgFiles/armin/org-macros.setup
 #+OPTIONS: h:1 num:nil toc:nil d:nil
 
-#+TITLE: consult-mu - Use [[https://github.com/minad/consult][Consult]] asynchronously to search mu4e emails in the minibuffer
+#+TITLE: consult-mu - use [[https://github.com/minad/consult][consult]] asynchronously to search mu4e emails in the minibuffer
 #+AUTHOR: Armin Darvish
 #+LANGUAGE: en
 
