@@ -273,7 +273,7 @@ Note that when the candidate is selected (i.e. by pressing =RET=), the highlight
 #+attr_html: :width 350px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view.png]]
 
-#+attr_html: :align center
+*caption*:
 Left - when Message is viewed highlight overlays are turned off. Right - higlhights are turned back on by =M-x consult-mu-overlays-toggle=.
 
 
