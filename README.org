@@ -253,31 +253,30 @@ When it is set to t, all matches of the search term are highlighted in the minib
 
 For example in the screenshot below, I am searching for the term =consult-gh= and all the matches of consult-gh are highlighted in the titles.
 
-#+attr_org: :width 600px :height nilpx
-#+attr_latex: :width 600px :height nilpx
-#+attr_html: :width 600px :height nilpx
-[[file:../../Pictures/2023-11-14_09-48-43_screenshot.png]]
+#+attr_org: :width 800px :height nilpx
+#+attr_latex: :width 800px :height nilpx
+#+attr_html: :width 800px :height nilpx
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-minibuffer.png]][[file:../../Pictures/2023-11-14_09-48-43_screenshot.png]]
 
 Furthermore if I look at a preview, all the instances of consult-gh matches in the preview buffer are also highlighted:
 
-#+attr_org: :width 600px :height nilpx
-#+attr_latex: :width 600px :height nilpx
-#+attr_html: :width 600px :height nilpx
-[[file:../../Pictures/2023-11-14_09-51-12_screenshot.png]]
-
+#+attr_org: :width 800px :height nilpx
+#+attr_latex: :width 800px :height nilpx
+#+attr_html: :width 800px :height nilpx
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-preview.png]]
 
 Note that when the candidate is selected (i.e. by pressing =RET=), the highlight overlay is turned off, so you can see the orignial message as is, but you can call =consult-mu-overlays-toggle= (i.e. =M-x consult-mu-overlays-toggle=) to see the highlights of the query again.
 
-#+attr_org: :width 200px :height nilpx
-#+attr_latex: :width 200px :height nilpx
-#+attr_html: :width 200px :height nilpx
-[[file:../../Pictures/2023-11-14_09-56-35_screenshot.png]]
+#+attr_org: :width 350px :height nilpx
+#+attr_latex: :width 350px :height nilpx
+#+attr_html: :width 350px :height nilpx
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view-off.png]]
 
 
 #+attr_org: :width 200px :height nilpx
 #+attr_latex: :width 200px :height nilpx
 #+attr_html: :width 200px :height nilpx
-[[file:../../Pictures/2023-11-14_09-54-39_screenshot.png]]
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view-on.png]]
 
 
 
