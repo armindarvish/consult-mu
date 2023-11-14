@@ -220,6 +220,12 @@ By default it is set to :date. But can be any of the following:
 
 Note that grouping works alongside sorting. For example if  =consult-mu-group-by= is set to =:day-of-week= and =consult-mu-search-sort-field= is set to =:date=, then the messages are grouped by day of week (e.g. all emails on Tuesdays will be in one group) then ordered chronologically within each group.
 
+Here is a screenshot of some examples:
+#+attr_org: :width 800px :height nilpx
+#+attr_latex: :width 800px :height nilpx
+#+attr_html: :width 800px :height nilpx
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-grouping-example.png]]
+
 **** =consult-mu-mark-previewed-as-read=
 This determines whether a message is marked as =read= when it is simply previewed (see =consult-mu-preview-key= above and documentation on =consult-preview-key=).
 
@@ -267,9 +273,9 @@ Furthermore if I look at a preview, all the instances of consult-gh matches in t
 
 Note that when the candidate is selected (i.e. by pressing =RET=), the highlight overlay is turned off, so you can see the orignial message as is, but you can call =consult-mu-overlays-toggle= (i.e. =M-x consult-mu-overlays-toggle=) to see the highlights of the query again.
 
-#+attr_org: :width 350px :height nilpx
-#+attr_latex: :width 350px :height nilpx
-#+attr_html: :width 350px :height nilpx
+#+attr_org: :width 800px :height nilpx
+#+attr_latex: :width 800px :height nilpx
+#+attr_html: :width 800px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/highlight-matches-view.png]]
 
 **** =consult-mu-action=
