@@ -243,7 +243,10 @@ By default it is bound to `consult-mu--view-action'."
 
 The idea is Taken from  https://github.com/seanfarley/counsel-mu.")
 
-(defvar consult-mu-saved-searches (list)
+(defvar consult-mu-saved-searches-dynamic (list)
+  "List of Favorite searches for `consult-mu'.")
+
+(defvar consult-mu-saved-searches-async consult-mu-saved-searches-dynamic
   "List of Favorite searches for `consult-mu'.")
 
 ;;; Faces
@@ -627,6 +630,7 @@ If MSGID is non-nil, put the cursor on message with MSGID.
 (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
+           (view-buffer (get-buffer consult-mu-view-buffer-name))
            (inhibit-read-only t)
            (expr (car (consult--command-split query)))
            (rewritten-expr (funcall mu4e-query-rewrite-function expr))
@@ -638,11 +642,15 @@ If MSGID is non-nil, put the cursor on message with MSGID.
        (:async
         (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
        (_ ))
+
+
       (with-current-buffer buf
         (save-excursion
           (erase-buffer)
           (mu4e-headers-mode)
           (setq-local mu4e-view-buffer-name consult-mu-view-buffer-name)
+          (if view-buffer
+              (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
           (unless ignore-history
             ; save the old present query to the history list
             (when mu4e--search-last-query
@@ -917,6 +925,7 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
   (let ((msgid (plist-get msg :message-id)))
     (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
       (with-current-buffer buf
+        ;;(mu4e-headers-mode)
         (goto-char (point-min))
         (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
         (unless noselect
@@ -953,12 +962,56 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
 
   (let* ((info (cdr cand))
          (msg (plist-get info :msg))
-         (query (substring-no-properties (plist-get info :query)))
+         (query (plist-get info :query))
          (match-str (car (consult--command-split query)))
          )
     (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)
     ))
+
+;; (defun consult-mu--reply (msg)
+;;   "Opens MSG in `consult-mu-headers' and `consult-mu-view'.
+
+;; If NOSELECT is non-nil, does not select the view buffer/window.
+
+;; If MARK-AS-READ is non-nil, marks the MSG as read.
+
+;; If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
+;; "
+;;   (let ((msgid (plist-get msg :message-id)))
+;;     (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
+;;       (with-current-buffer buf
+;;         ;;(mu4e-headers-mode)
+;;         (goto-char (point-min))
+;;         (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
+;;         ))
+
+
+;;     (with-current-buffer consult-mu-headers-buffer-name
+;;       (mu4e-headers-goto-message-id msgid)
+;;       (if mark-as-read
+;;           (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N"))
+;;       )
+
+;;     (when match-str
+;;       (add-to-history 'search-ring match-str)
+;;       (consult-mu--overlay-match match-str consult-mu-view-buffer-name t))
+
+;;     (with-current-buffer consult-mu-view-buffer-name
+;;       (goto-char (point-min)))
+
+;;     (unless noselect
+;;       (select-window (get-buffer-window consult-mu-view-buffer-name)))
+
+;;     consult-mu-view-buffer-name))
+
+;; (defun consult-mu--reply-action (cand)
+;;   (let* ((info (cdr cand))
+;;          (msg (plist-get info :msg))
+;;          (query (substring-no-properties (plist-get info :query)))
+;;          (match-str (car (consult--command-split query)))
+;;          )
+;; ))
 
 (defun consult-mu--dynamic-format-candidate (cand highlight)
   "Formats minibuffer candidates for `consult-mu'.
@@ -1072,7 +1125,7 @@ will retrieve the message as the example above, then narrows down the completion
    :initial (consult--async-split-initial initial)
    :group (if consult-mu-group-by #'consult-mu--group nil)
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
-                        consult-mu-saved-searches
+                        consult-mu-saved-searches-dynamic
                         )
    :history '(:input consult-mu--history)
    :require-match t
@@ -1188,7 +1241,6 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
                          (msgid (substring-no-properties (plist-get msg :message-id)))
                          (query (plist-get info :query))
                          (match-str (car (consult--command-split query)))
-                         (match-str (car (consult--command-split query)))
                          (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
                          (buffer consult-mu-view-buffer-name))
                (add-to-list 'consult-mu--view-buffers-list buffer)
@@ -1302,7 +1354,7 @@ will retrieve the message as the example above, then narrows down the completion
    :initial (consult--async-split-initial initial)
    :group (if consult-mu-group-by #'consult-mu--group nil)
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
-                        consult-mu-saved-searches
+                        consult-mu-saved-searches-dynamic
                         )
    :history '(:input consult-mu--history)
    :require-match t
@@ -1351,7 +1403,8 @@ Note that this is the async search directly using the commandline `mu` command a
         (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial)
          )
          (info (cdr sel))
-         (msg (plist-get info :msg)))
+         (msg (plist-get info :msg))
+         (query (plist-get info :query)))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
       )

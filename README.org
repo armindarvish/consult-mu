@@ -9,12 +9,12 @@
 #+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://img.shields.io/static/v1?label=Made%20For&message=GNU%20Emacs&color=7a5aba&logo=gnuemacs&logoColor=white"/></a>
 
 * About consult-mu
+Consult-mu provides a dynamically updated search interface to mu4e. It uses the awesome package [[https://github.com/minad/consult][consult]] by [[https://github.com/minad][Daniel Mendler]] and [[https://github.com/djcb/mu][mu/mu4e]] by [[https://github.com/djcb/][Dirk-Jan C. Binnema,]] and optionally [[https://github.com/oantolin/embark][Embark]] by [[https://github.com/oantolin][Omar Antolín Camarena]] to improve the search experience of mu4e.
 
-** Main Functions and Interactive Commands
-Consult-mu provides a dynamiccaly updated search interface to mu4e. It uses the awesome package [[https://github.com/minad/consult][consult]] by [[https://github.com/minad][Daniel Mendler]] and [[https://github.com/djcb/mu][mu/mu4e]] by [[https://github.com/djcb/][Dirk-Jan C. Binnema,]] and optionally [[https://github.com/oantolin/embark][Embark]] by [[https://github.com/oantolin][Omar Antolín Camarena]] to improve the search experience of mu4e. There two main interactive commands:
+** Main Interactive Commands
+ There two main interactive commands:
 
 1. =consult-mu=: Provides a dynamic version of =mu4e-search=. As the user types inputs, the result gets updated. This command uses a modified version of =mu4e-search= and then takes the content of =mu4e-headers= buffer to populate minibuffer completion table. This allows the user to change the query or search properties (such as number of results, sort-field, sort-direction, ...) dynamically by changing the input in the minibuffer. In addition previews of the results can be viewed similar to other consult functions. Once a candidate is selected, the user will see the search result sin =mu4e-headers=, and =mu4e-view= buffers similar to mu4e-search results.
-
 
 2. =consult-mu-async=: This function provides a very fast search without loading mu4e-headers, which means mu4e functionalities (like marks, reply, forwards, etc.) are not available in the preview buffer. This is very useful for finding individual emails or threads in a large pool quickly (in other words "a needle in a haystack" scenarios!). Previews can be seen while the results are being populated asynchronously (without populating mu4e-headers buffer). Upon selection of a candidate, mu4e-headers buffer is populated with only an individual email (or thread). From here all the normal functionalities of mu4e is again available.
 
@@ -141,6 +141,9 @@ This variable is used to format the headers inside minibuffer. This takes a simi
 Note that it is generally recommended to use =consult-mu-headers-template= below because it has more options and does not affect the consult-mu-headers buffer.
 
 **** =consult-mu-headers-template=
+:PROPERTIES:
+:ID:       155CF359-63D0-4D4D-B0BD-7C089E2D9B3C
+:END:
 This is a template string that overrides the consult-mu-headers-field to format headers. It provides more options than =consult-mu-headers-field= and is generally the recommended approach to make custom headers.
 Special chaacters in the string (either “%[char]" or “%[char][integer]”) in the string get expanded to create headers. Each character represents a different field and the integer defines the length of the field. For exmaple "%d15%s50" means 15 characters for date and 50 charcters for subject.
 
@@ -315,7 +318,43 @@ Here is a good customization for great performance as well as functionality:
 #+end_src
 
 * Features and Demos
-To be completed!
+
+** Search
+consult-mu uses [[https://github.com/minad/consult#asynchronous-search][consult's asynchronous search]] feature. In order to search a query you can type your standard Mu4e query after =#= sign in the minibuffer. Here are some examples:
+
+#+begin_example
+#tickets
+#flag:unread
+#(flag:unread AND maildir:/inbox)
+#(maildir:/drafts OR maildir:/sent)
+#+end_example
+
+
+In addition, you can pass command line arguments that you can normally pass to =mu= (see =mu find --help=) in the command line to consult-mu by using a =--= separator like this:
+
+#+begin_example
+#tickets -- --maxnum 500 -s s
+#+end_example
+
+In the example above, the maximum number of results to retrieve are set to 500 (=--maxnum 500=) and the result are sorted by the subject (=-s s=). For more details on command line options, you can refer to mu's help (i.e. run =mu find --help= in terminal).
+
+Once consult-mu retrieves a list of results, you can further narrow down the list of candidates by using a second =#=.
+
+#+begin_example
+#tickets -- -z #concert
+#+end_example
+
+In the example above, we first run a search *tickets* and sort the results with reverse order (using =-z= option) then narrows down the list of candidates by the word, *concert*.
+
+Note that narrow downs are similar to other narrow downs in the minibuffer, therefore here you cannot use mu4e search syntax but you can use regular expressions. Also, the narrow down searches in the entire header string, therefore you can use any information available in the headers (date, title, email addresses, flags,...) for narrow down. (to change the format of the header, take a look at [[id:155CF359-63D0-4D4D-B0BD-7C089E2D9B3C][=consult-mu-headers-template=]]. Here is a screenshot for doing a search and narrow:
+
+
+** Saved Searches and Quick Access History
+You can also save your searches for quick access later by modifying the variable =consult-mu-saved-searches=. This is a list of mu4e queries (i.e. strings) that gets added to future-history when you run consult-mu or
+
+** Integration with Embark
+** Extras
+*** Attachments
 
 * Bug reports
 To report bug, first check if it is already reported in the [[https://github.com/armindarvish/consult-mu/issues][*issue tracker*]] and see if there is an existing solution or add relevant comments and discussion under the same issue. If not file a new issue following these steps:
