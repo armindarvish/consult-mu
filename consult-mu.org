@@ -1435,7 +1435,7 @@ BUILDER is the command line builder function (e.g. `consult-mu--async-builder').
     (if skip-dups (setq opts (append opts (list "--skip-dups"))))
     (if include-related (setq opts (append opts (list "--include-related"))))
     (unless (or (member "-n" flags) (member "--maxnum" flags))
-      (if (> consult-mu-maxnum 0)
+      (if (and consult-mu-maxnum (> consult-mu-maxnum 0))
           (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
     (pcase consult-mu-search-sort-direction
       ('descending
