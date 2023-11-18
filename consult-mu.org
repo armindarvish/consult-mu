@@ -1109,6 +1109,7 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
          (query (substring-no-properties (plist-get info :query)))
          (match-str (car (consult--command-split query)))
          )
+))
 #+end_src
 ** Frontend Interactive Commands
 **** consult-mu (dynamic collection)
