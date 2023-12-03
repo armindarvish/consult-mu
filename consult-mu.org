@@ -12,7 +12,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "0.34") (mu "1.10"))
+;; Package-Requires: ((emacs "28.0") (consult "0.34"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 
@@ -157,7 +157,7 @@ chronologically (:date) by the newest message in the thread.
   :group 'consult-mu
   :type 'boolean)
 
-(defcustom consult-mu-group-by :date
+(defcustom consult-mu-group-by nil
   "What field to use to group the results in the minibuffer.
 
 By default it is set to :date. But can be any of:
@@ -172,6 +172,7 @@ By default it is set to :date. But can be any of:
   :month        group by the month of the email (i.e. Jan, Feb, ..., Dec)
   :week         group by the week number of the email (.i.e. 1st week, 2nd week, ... 52nd week)
   :day-of-week  group by the day email was sent (i.e. Mondays, Tuesdays, ...)
+  :day          group by the day email was sent (similar to :day-of-week)
   :size         group by the file size of the email
   :flags        group by flags (as defined by mu)
   :tags         group by tags (as defined by mu)
@@ -188,10 +189,28 @@ By default it is set to :date. But can be any of:
                 (const :month)
                 (const :week)
                 (const :day-of-week)
+                (const :day)
                 (const :size)
                 (const :flags)
                 (const :tags)
-                (const :changed)))
+                (const :changed)
+                (const nil)))
+
+(defcustom consult-mu-contacts-group-by :name
+  "What field to use to group the results in the minibuffer.
+
+By default it is set to :name. But can be any of:
+
+  :name         group by contact name
+  :email        group by email of the contact
+  :domain       group by the domain of the contact's email (e.g. domain.com in user@domain.com)
+  :user         group by the ncontact's user name (e.g. user in user@domain.com)
+"
+  :group 'consult-mu
+  :type '(radio (const :name)
+                (const :email)
+                (const :domain)
+                (const :user)))
 
 (defcustom consult-mu-mark-previewed-as-read nil
   "Whether to mark PREVIEWED emails as read or not?"
@@ -242,6 +261,21 @@ By default it is bound to `consult-mu--view-action'."
   :group 'consult-mu
   :type 'function)
 
+(defcustom consult-mu-contacts-action #'consult-mu-contacts--list-messages-action
+  "The function that is used when selecting a contact.
+By default it is bound to `consult-mu-contacts--list-messages-action'."
+  :group 'consult-mu
+  :type 'function)
+
+(defcustom consult-mu-default-command #'consult-mu-dynamic
+  "Which command should `consult-mu' call."
+  :group 'consult-mu
+  :type '(choice (function :tag "Use Dynamic Collection (i.e. `consult-mu-dynamic')" #'consult-mu-dynamic)
+                (function :tag "Use Async Collection (i.e. `consult-mu-async')"  #'consult-mu-async)
+                (function :tag "Custom Function")))
+
+
+
 #+end_src
 
 *** Other Variables
@@ -252,6 +286,9 @@ By default it is bound to `consult-mu--view-action'."
 
 (defvar consult-mu-messages-category 'consult-mu-messages
   "Category symbol for messages in `consult-mu' package.")
+
+(defvar consult-mu-contacts-category 'consult-mu-contacts
+  "Category symbol for contacts in `consult-mu' package.")
 
 (defvar consult-mu--view-buffers-list (list)
   "List of currently open preview buffers for `consult-mu'.")
@@ -269,6 +306,13 @@ The idea is Taken from  https://github.com/seanfarley/counsel-mu.")
 
 (defvar consult-mu-saved-searches-async consult-mu-saved-searches-dynamic
   "List of Favorite searches for `consult-mu'.")
+
+(defvar consult-mu--override-group nil
+"Override grouping in `consult-mu' based on user input.")
+
+(defvar consult-mu-contacts--override-group nil
+"Override grouping in `consult-mu-contacs' based on user input.")
+
 
 #+end_src
 
@@ -674,7 +718,11 @@ In other words if the sort-field is not the :date threading is disabled (because
 
 When the sort-field is :date, then `consult-mu-search-threads' is used. If `consult-mu-search-threads' is set to nil, the user can use command line arguments (a.k.a. -t or --thread) to enable it dynamically.
 "
-(if (not (equal mu4e-search-sort-field :date)) 'nil (or (member "-t" opts) (member "--threads" opts) consult-mu-search-threads)))
+(cond
+ ((not (equal mu4e-search-sort-field :date))
+  nil)
+ ((or (member "-t" opts) (member "--threads" opts) consult-mu-search-threads)
+  t)))
 
 #+end_src
 
@@ -972,9 +1020,9 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
   "Gets the group name of CAND using `consult-mu-group-by'
 See `consult-mu-group-by' for details of grouping options.
 "
-(if consult-mu-group-by
-(let ((msg (get-text-property 0 :msg cand))
-      (field (if (not (keywordp consult-mu-group-by)) (intern (concat ":" (format "%s" consult-mu-group-by))) consult-mu-group-by)))
+(let* ((msg (get-text-property 0 :msg cand))
+      (group (or consult-mu--override-group consult-mu-group-by))
+      (field (if (not (keywordp group)) (intern (concat ":" (format "%s" group))) group)))
       (pcase field
         (:date (format-time-string "%a %d %b %y" (plist-get msg field)))
         (:from (cond
@@ -991,11 +1039,13 @@ See `consult-mu-group-by' for details of grouping options.
         (:year (format-time-string "%Y" (plist-get msg :date)))
         (:month (format-time-string "%B" (plist-get msg :date)))
         (:day-of-week (format-time-string "%A" (plist-get msg :date)))
+        (:day (format-time-string "%A" (plist-get msg :date)))
         (:week (format-time-string "%V" (plist-get msg :date)))
         (:size (file-size-human-readable (plist-get msg field)))
         (:flags (format "%s" (plist-get msg field)))
         (:tags (format "%s" (plist-get msg field)))
-        (_ (format "%s" (plist-get msg field)))))))
+        (_ (if (plist-get msg field) (format "%s" (plist-get msg field)) nil))
+        )))
 
 (defun consult-mu--group (cand transform)
 "Group function for `consult-mu' or `consult-mu-async' minibuffer candidates.
@@ -1008,7 +1058,7 @@ This is passed as GROUP to `consult--read' on candidates and is used to group em
 
 ***** actions
 In this section we define action functions that can be run on a candidate for example view, reply, forward, etc.
-****** view candidate
+****** view messages
 #+begin_src emacs-lisp
 
 (defun consult-mu--view (msg noselect mark-as-read match-str)
@@ -1033,9 +1083,11 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
     (consult-mu--view-msg msg consult-mu-view-buffer-name)
 
     (with-current-buffer consult-mu-headers-buffer-name
-      (mu4e-headers-goto-message-id msgid)
-      (if mark-as-read
-          (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N"))
+      (if msgid
+          (progn
+          (mu4e-headers-goto-message-id msgid)
+          (if mark-as-read
+             (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N"))))
       )
 
     (when match-str
@@ -1046,7 +1098,8 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
       (goto-char (point-min)))
 
     (unless noselect
-      (select-window (get-buffer-window consult-mu-view-buffer-name)))
+      (when msg
+        (select-window (get-buffer-window consult-mu-view-buffer-name))))
 
     consult-mu-view-buffer-name))
 
@@ -1115,8 +1168,31 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
 ;;          )
 ;; ))
 #+end_src
+
+****** view messages form contact
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--list-messages (contact)
+  (let* ((consult-mu-maxnum nil)
+        (email (plist-get contact :email))
+        )
+      (consult-mu (format "contact:%s" email))
+))
+
+(defun consult-mu-contacts--list-messages-action (cand)
+  "Searches the messages from contact candidate, CAND.
+
+This is a wrapper function around `consult-mu-contacts--list-messages'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--list-messages'.
+
+To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--list-messages-action."
+
+  (let* ((info (cdr cand))
+         (contact (plist-get info :contact))
+         )
+    (consult-mu-contacts--list-messages contact)
+    ))
+#+end_src
 ** Frontend Interactive Commands
-**** consult-mu (dynamic collection)
+**** consult-mu-dynamic (dynamic collection)
 ***** format candidate
 #+begin_src emacs-lisp
 (defun consult-mu--dynamic-format-candidate (cand highlight)
@@ -1144,7 +1220,8 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
                       ((stringp match-str)
                        (setq str (consult-mu--highlight-match match-str str t))))
                    str)
-(cons str (list :msg msg :query query :type :dynamic))))
+(when msg
+(cons str (list :msg msg :query query :type :dynamic)))))
 #+end_src
 
 ***** dynamic collection
@@ -1155,14 +1232,25 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
 INPUT is the user input. It is passed as QUERY to `consult-mu--update-headers', appends the result to `consult-mu-headers-buffer-name' and returns the collects list of found messages and returns it as minibuffer completion table.
 "
 (save-excursion
-  (consult-mu--update-headers input nil nil :dynamic)
+  (pcase-let* ((`(,arg . ,opts) (consult--command-split input)))
+      (consult-mu--update-headers input nil nil :dynamic)
+  (if (or (member "-g" opts)  (member "--group" opts))
+        (cond
+         ((member "-g" opts)
+          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) "nil")))
+          )
+         ((member "--group" opts)
+          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))
+          )
+         )
+      (setq consult-mu--override-group nil)
+      ))
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
       (cl-loop until (eobp)
-               collect (when-let ((msg (ignore-errors (mu4e-message-at-point)))
-                             (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split input))) nil)))
-                                                                    (consult-mu--dynamic-format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
+               collect (let ((msg (ignore-errors (mu4e-message-at-point))))
+                         (consult-mu--dynamic-format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
                  do (forward-line 1)))
         )))
 #+end_src
@@ -1196,6 +1284,7 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
          (save-mark-and-excursion
            (consult-mu--execute-all-marks)
            )
+         (setq consult-mu--override-group nil)
          cand)
         ))))
 
@@ -1238,7 +1327,7 @@ will retrieve the message as the example above, then narrows down the completion
    :lookup (consult-mu--lookup)
    :state (funcall #'consult-mu--dynamic-state)
    :initial (consult--async-split-initial initial)
-   :group (if consult-mu-group-by #'consult-mu--group nil)
+   :group #'consult-mu--group
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
                         consult-mu-saved-searches-dynamic
                         )
@@ -1252,7 +1341,7 @@ will retrieve the message as the example above, then narrows down the completion
 
 ***** interactive command
 #+begin_src emacs-lisp
-(defun consult-mu (&optional initial noaction)
+(defun consult-mu-dynamic (&optional initial noaction)
     "Lists results of `mu4e-search' dynamically.
 
 This is an interactive wrapper function around `consult-mu--dynamic'. It queries the user for a search term in the minibuffer, then fetches a list of messages for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
@@ -1288,7 +1377,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
   (consult-mu--execute-all-marks)
   )
   (let* ((sel
-        (consult-mu--dynamic (concat "[" (propertize "consult-mu" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
+        (consult-mu--dynamic (concat "[" (propertize "consult-mu-dynamic" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
          ))
     (save-mark-and-excursion
       (consult-mu--execute-all-marks)
@@ -1426,6 +1515,16 @@ BUILDER is the command line builder function (e.g. `consult-mu--async-builder').
                (threads (if (not (equal sortfield :date)) nil (or (member "-t" flags) (member "--threads" flags) mu4e-search-threads)))
                (skip-dups (or (member "-u" flags) (member "--skip-dups" flags) mu4e-search-skip-duplicates))
                (include-related (or (member "-r" flags) (member "--include-related" flags) mu4e-search-include-related)))
+    (if (or (member "-g" flags)  (member "--group" flags))
+        (cond
+         ((member "-g" flags)
+          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) "nil")))
+          (setq opts (remove "-g" (remove (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) opts))))
+         ((member "--group" flags)
+          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))
+          (setq opts (remove "--group" (remove (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) opts)))))
+      (setq consult-mu--override-group nil)
+      )
     (setq opts (append opts (list "--nocolor")))
     (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx%sp%sc%sh%sl"
                                                      consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
@@ -1491,7 +1590,7 @@ will retrieve the message as the example above, then narrows down the completion
    :lookup (consult-mu--lookup)
    :state (funcall #'consult-mu--async-state)
    :initial (consult--async-split-initial initial)
-   :group (if consult-mu-group-by #'consult-mu--group nil)
+   :group #'consult-mu--group
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
                         consult-mu-saved-searches-dynamic
                         )
@@ -1561,10 +1660,300 @@ Note that this is the async search directly using the commandline `mu` command a
 #+end_src
 
 
+**** consult-mu
+
+***** interactive command
+#+begin_src emacs-lisp
+(defun consult-mu (&optional initial noaction)
+"Default consult-mu command.
+This is a wrapper function that calls `consult-mu-default-command'.
+
+For example, the `consult-mu-default-command can be set to
+`#'consult-mu-dynamic' sets the default behavior to dynamic collection
+`#'consult-mu-async' sets the default behavior to async collection
+"
+
+  (interactive "P")
+  (funcall consult-mu-default-command initial noaction)
+)
+#+end_src
+
+**** consult-mu-contacts
+***** format candidate
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--format-candidate (string input highlight)
+  "Formats minibuffer candidates for `consult-mu-contacts'.
+STRING is the output retrieved from `mu find INPUT ...` in the command line.
+INPUT is the query from the user.
+if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
+  (let* ((query input)
+         (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" string))
+         (email (match-string 1 string))
+         (user (match-string 2 string))
+         (domain (match-string 3 string))
+         (extension (match-string 4 string))
+         (name (string-trim (replace-regexp-in-string email "" string nil t nil nil)))
+         (contact (list :name name :email email))
+         (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
+         (str (format "%s\s\s%s"
+                      (propertize (consult-mu--set-string-width email (floor (* (frame-width) 0.55))) 'face 'consult-mu-sender-face)
+                      (propertize name 'face 'consult-mu-subject-face)
+                      ))
+         (str (propertize str :contact contact :query query))
+         )
+    (if (and consult-mu-highlight-matches highlight)
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-mu--highlight-match match-str str t))))
+      str)
+    (cons str (list :contact contact :query query))))
+#+end_src
+
+
+***** group
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--group-name (cand)
+  "Gets the group name of CAND using `consult-mu-contacts-group-by'
+See `consult-mu-contacts-group-by' for details of grouping options.
+"
+(let* ((contact (get-text-property 0 :contact cand))
+       (email (plist-get contact :email))
+       (name (plist-get contact :name))
+       (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+\\)@\\(?2:[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" email))
+       (user (match-string 1 email))
+       (domain (match-string 2 email))
+       (group (or consult-mu-contacts--override-group consult-mu-contacts-group-by))
+      (field (if (not (keywordp group)) (intern (concat ":" (format "%s" group))) group)))
+      (pcase field
+        (:email email)
+        (:name (if (string-empty-p name) "n/a" name))
+        (:domain domain)
+        (:user user)
+        (_ nil)
+        )))
+
+(defun consult-mu-contacts--group (cand transform)
+"Group function for `consult-mu-contacts''s minibuffer candidates.
+
+This is passed as GROUP to `consult--read' on candidates and is used to group contacts using `consult-mu-contacts--group-name'."
+  (when-let ((name (consult-mu-contacts--group-name cand)))
+    (if transform (substring cand) name)
+    ))
+#+end_src
+
+#+RESULTS:
+: consult-mu-contacts--group
+
+***** state/preview
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--state ()
+  "State function for `consult-mu-contacts' candidates.
+This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
+  (lambda (action cand)
+    (let ((preview (consult--buffer-preview)))
+      (pcase action
+        ;; ('preview
+        ;;  (if cand
+        ;;      (when-let* ((info (cdr cand))
+        ;;                  (contact (plist-get info :contact))
+        ;;                  (query (plist-get info :query))
+        ;;                  (match-str (car (consult--command-split query)))
+        ;;                  (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+        ;;                  (buffer consult-mu-view-buffer-name))
+        ;;        (add-to-list 'consult-mu--view-buffers-list buffer)
+        ;;        (funcall preview action
+        ;;                 (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
+        ;;                 )
+        ;;        (with-current-buffer consult-mu-view-buffer-name
+        ;;          (unless (one-window-p) (delete-other-windows))
+        ;;          )))
+        ;;  )
+        ('return
+         (save-mark-and-excursion
+           (consult-mu--execute-all-marks)
+           )
+         (setq consult-mu-contacts--override-group nil)
+         cand)
+        ))))
+
+#+end_src
+
+#+RESULTS:
+: consult-mu-contacts--state
+
+
+***** transform
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--transform (async builder)
+  "Adds annotation to minibuffer candiates for `consult-mu'.
+
+Returns ASYNC function after formating results with `consult-mu-contacts--format-candidate'.
+BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-builder')."
+  (let ((input))
+    `(lambda (action)
+       (cond
+        ((stringp action)
+         (setq input action)
+         (funcall ,async action)
+         )
+        ((consp action)
+         (funcall ,async (mapcar (lambda (string)
+                      (consult-mu-contacts--format-candidate string input t))
+                    action))
+         )
+         (t (funcall ,async action))
+         )
+         )))
+#+end_src
+
+#+RESULTS:
+: consult-mu-contacts--transform
+
+***** builder
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--builder (input)
+  "Build mu command line for searching messages by INPUT (e.g. `mu find INPUT)`."
+  (pcase-let* ((consult-mu-args (append consult-mu-args '("cfind")))
+               (cmd (consult--build-args consult-mu-args))
+               (`(,arg . ,opts) (consult--command-split input))
+               (flags (append cmd opts)))
+    (unless (or (member "-n" flags) (member "--maxnum" flags))
+      (if (and consult-mu-maxnum (> consult-mu-maxnum 0))
+          (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
+    (if (or (member "-g" opts)  (member "--group" opts))
+        (cond
+         ((member "-g" opts)
+          (setq consult-mu-contacts--override-group (ignore-errors (intern (nth (+ (cl-position "-g" opts :test 'equal) 1) opts))))
+          (setq opts (remove "-g" (remove (ignore-errors (nth (+ (cl-position "-g" opts :test 'equal) 1) opts)) opts))))
+         ((member "--group" opts)
+          (setq consult-mu-contacts--override-group (ignore-errors (intern (nth (+ (cl-position "--group" opts :test 'equal) 1) opts))))
+          (setq opts (remove "--group" (remove (ignore-errors (nth (+ (cl-position "--group" opts :test 'equal) 1) opts)) opts))))
+         )
+      (setq consult-mu-contacts--override-group nil)
+      )
+    (pcase-let* ((`(,re . ,hl) (funcall consult--regexp-compiler arg 'pcre t)))
+      (when re
+        (cons (append cmd
+                      (list (string-join re " "))
+                      opts)
+              hl)))))
+#+end_src
+
+#+RESULTS:
+: consult-mu-contacts--builder
+
+
+***** internal async command
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--async (prompt builder &optional initial)
+"Query mu4e messages asynchronously.
+
+This is a non-interactive internal function. For the interactive version see `consult-mu-contacts'.
+
+It runs the command line from `consult-mu-contacts--builder' in an async process and returns the results (list of messages) as a completion table in minibuffer that will be passed to `consult--read'. The completion table gets dynamically updated as the user types in the minibuffer. Each candidate in the minibuffer is formatted by `consult-mu-contacts--transform' to add annotation and other info to the candidate.
+
+PROMPT is the prompt in the minibuffer (passed as PROMPT to `consult--red'.)
+BUILDER is an async builder function passed to `consult--async-command'.
+INITIAL is an optional arg for the initial input in the minibuffer. (passed as INITITAL to `consult--read'.)
+
+commandline arguments/options (see `mu find --help` in the command line for details) can be passed to the minibuffer input similar to `consult-grep'. For example the user can enter:
+
+`#paper -- --maxnum 200 --sortfield from --reverse'
+
+this will search for mu4e messages with the query \"paper\", retrives a maximum of 200 messages sorts them by the \"from:\" field and reverses the sort direction (opposite of `consult-mu-search-sort-field').
+
+Also, the results can further be narrowed by entering \"#\" similar to `consult-grep'.
+
+For example:
+
+`#paper -- --maxnum 200 --sortfield from --reverse#accepted'
+
+will retrieve the message as the example above, then narrows down the completion table to candidates that match \"accepted\".
+"
+  (consult--read
+   (consult--async-command builder
+     (consult-mu-contacts--transform builder)
+     )
+   :prompt prompt
+   ;;:lookup (consult-mu--lookup)
+   :state (funcall #'consult-mu-contacts--state)
+   :initial (consult--async-split-initial initial)
+   :group #'consult-mu-contacts--group
+   ;;:add-history (append (list (consult--async-split-thingatpt 'symbol))
+   ;;                     consult-mu-saved-searches-dynamic
+   ;;                     )
+   ;;:history '(:input consult-mu--history)
+   ;;:require-match t
+   :category 'consult-mu-contacts
+   :preview-key consult-mu-preview-key
+   :sort t))
+
+#+end_src
+
+#+RESULTS:
+: consult-mu-contacts--async
+
+***** interactive command
+#+begin_src emacs-lisp
+(defun consult-mu-contacts (&optional initial noaction)
+    "Lists results of `mu find` Asynchronously.
+
+This is an interactive wrapper function around `consult-mu-contacts--async'. It queries the user for a search term in the minibuffer, then fetches a list of messages for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
+
+Upon selection of a candidate either
+ - the candidate is returned if NOACTION is non-nil
+ or
+ - the candidate is passed to `consult-mu-action' if NOACTION is nil.
+
+Additional commandline arguments can be passed in the minibuffer entry by typing `--` followed by command line arguments.
+
+For example the user can enter:
+
+`#consult-mu -- -n 10'
+
+this will run a `mu4e-search' with the query \"consult-my\" and changes the search limit (i.e. `mu4e-search-results-limit' to 10.
+
+
+Also, the results can further be narrowed by entering \"#\" similar to `consult-grep'.
+
+For example:
+
+`#consult-mu -- -n 10#github'
+
+will retrieve the message as the example above, then narrows down the completion table to candidates that match \"github\".
+
+INITIAL is an optional arg for the initial input in the minibuffer. (passed as INITITAL to `consult-mu-contacts--async').
+
+For more details on consult--async functionalities, see `consult-grep' and the official manual of consult, here: https://github.com/minad/consult.
+
+Note that this is the async search directly using the commandline `mu` command and not mu4e-search. As a result, mu4e-headers buffers are not created until a single message is selected (or interacted with using embark, etc.) Previews are shown in a mu4e-view buffer (see `consult-mu-view-buffer-name') attached to an empty mu4e-headers buffer (i.e. `consult-mu-headers-buffer-name').  This allows quick retrieval of many messages (tens of thousands) and previews, but not opening the results in a mu4e-headers buffer. If you want ot open the results in a mu4e-headers buffer for other work flow, then you should use the dynamically collected function `consult-mu' which is slower if searching for many emails but allows follow up interactions in a mu4e-headers buffer.
+"
+  (interactive)
+  (save-mark-and-excursion
+  (consult-mu--execute-all-marks)
+  )
+  (let* ((sel
+        (consult-mu-contacts--async (concat "[" (propertize "consult-mu-contacts" 'face 'consult-mu-sender-face) "]" " Search Contacts:  ") #'consult-mu-contacts--builder initial)
+         )
+         )
+    (save-mark-and-excursion
+      (consult-mu--execute-all-marks)
+      )
+    (if noaction
+        sel
+      (progn
+        (funcall consult-mu-contacts-action sel)
+        sel))))
+#+end_src
+
+#+RESULTS:
+: consult-mu-contacts
+
 ** Provide
 #+begin_src emacs-lisp
 ;;; provide `consult-mu' module
-
 (provide 'consult-mu)
 #+end_src
 ** Footer
@@ -1621,6 +2010,14 @@ This section includes additional useful embark actions as well as possible keyma
         (consult-mu--update-headers query t msg :async)
       )
     (funcall consult-mu-action newcand))
+  )
+
+(defun consult-mu-contacts-embark-default-action (cand)
+  "Run `consult-mu-contacts-action' on the candidate."
+  (let* ((contact (get-text-property 0 :contact cand))
+         (query (get-text-property 0 :query cand))
+         (newcand (cons cand `(:msg ,msg :query ,query))))
+    (funcall consult-mu-contacts-action newcand))
   )
 
 ;; (defun consult-mu-embark-reply (cand)
@@ -1714,6 +2111,13 @@ This section includes additional useful embark actions as well as possible keyma
         )
       )))
 
+(defun consult-mu-contacts-embark-compose (cand)
+    (let* ((contact (get-text-property 0 :contact cand)))
+      (unless (mu4e-running-p) (mu4e--server-start))
+      ;;(mu4e-compose-new)
+      ;;(insert contact)
+      ))
+
 ;; (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler)
 ;;            ((symbol-function #'mu4e-view) #'consult-mu--view-msg)
 ;;            ((symbol-function #'mu4e~set-sent-handler-message-sent-hook-fn) (lambda ())))
@@ -1772,6 +2176,15 @@ This section includes additional useful embark actions as well as possible keyma
   "f" #'consult-mu-embark-forward
   )
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
+
+
+(defvar-keymap consult-mu-embark-contacts-actions-map
+  :doc "Keymap for consult-mu-embark-contacts"
+  :parent consult-mu-embark-general-actions-map
+  "c" #'consult-mu-contacts-embark-compose
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
 
 ;; macro for defining functions for marks
 (defmacro consult-mu-embark--defun-mark-for (mark)
@@ -1839,6 +2252,7 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 
 ;; change the default action on `consult-mu-messages' category.
 (add-to-list 'embark-default-action-overrides '(consult-mu-messages . consult-mu-embark-default-action))
+(add-to-list 'embark-default-action-overrides '(consult-mu-contacts . consult-mu-contacts-embark-default-action))
 
 ;;; Provide `consul-gh-embark' module
 

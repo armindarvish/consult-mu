@@ -350,11 +350,23 @@ Note that narrow downs are similar to other narrow downs in the minibuffer, ther
 
 
 ** Saved Searches and Quick Access History
-You can also save your searches for quick access later by modifying the variable =consult-mu-saved-searches=. This is a list of mu4e queries (i.e. strings) that gets added to future-history when you run consult-mu or
+Consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
+
+Here is a screenshot of quickly going through some saved searches (using =next-history-element= which is bound to =M-n= by default).
 
 ** Integration with Embark
+consult-mu provides integration with [[https://github.com/oantolin/embark][embark]] defined in =consult-mu-embark.el= If you use embark, you can use these commands to run actions on the search results directly from minibuffer. For example, you can call =consult-mu-embark-reply= to reply to a message or =consult-mu-embark-mark-for-refile= to refile (a.k.a. archive) the message and so on.
+
+For marking, note that, by default when consult-mu-embark is loaded, it creates a function for every item in the =mu4e-marks= and binds them to the =:char= for that mark in =consult-mu-embark-messages-actions-map=.
+
+You can also use =embark-select= and =embark-act-all= to run the same command on multiple messages, but this only works in consult-mu and not so well with consult-mu-async because with consult-my-async, only one message at a time is added to the headers view and therefore running commands on multiple candidates with embark is not supported.
+
 ** Extras
+In addition to improvements for searching, consult-mu also provides extra features for composing, contacts, ... These features are defined in the files under the =extras= folder.
+
 *** Attachments
+By default, attaching files to emails with mu4e is not very intuitive or interactive. If you use [[https://github.com/jeremy-compostella/org-msg][org-msg]], it provides an interactive command for attaching files, but it is only for one file at a time and for each file you need to go through some menus. Some emacs configs, like [[https://github.com/doomemacs/doomemacs][doomemacs]], do provide their own commands to allow using a dired buffer to attach multiple files to an email (see [[https://github.com/doomemacs/doomemacs/blob/986398504d09e585c7d1a8d73a6394024fe6f164/modules/email/mu4e/autoload/email.el#L272C8-L272C26][+mu4e/attach-files]]). Personally, I prefer using a minibuffer completion (instead of switching to a dired buffer). Therefore =consult-mu-attach-add= provides an interactive command to attach files to an email. In the minibuffer, you can then call =embark-dwim= on any candidate to add it to attach the file. Note that to add multiple candidates without exiting the minibuffer you either need to set =embark-quit-after-action= to =nil=, or refer to the embark official guide on how to make a no-quit version of the commands here: [[https://github.com/oantolin/embark#quitting-the-minibuffer-after-an-action][embark#quitting-the-minibuffer-after-an-action]]. Similarly, =consult-mu-attach-remove= provides an interactive command to remove already attached files from the message.
+
 
 * Bug reports
 To report bug, first check if it is already reported in the [[https://github.com/armindarvish/consult-mu/issues][*issue tracker*]] and see if there is an existing solution or add relevant comments and discussion under the same issue. If not file a new issue following these steps:
