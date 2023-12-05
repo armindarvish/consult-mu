@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "0.34") (mu "1.10.7"))
+;; Package-Requires: ((emacs "28.0") (consult "0.34"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 
@@ -36,6 +36,14 @@
         (consult-mu--update-headers query t msg :async)
       )
     (funcall consult-mu-action newcand))
+  )
+
+(defun consult-mu-contacts-embark-default-action (cand)
+  "Run `consult-mu-contacts-action' on the candidate."
+  (let* ((contact (get-text-property 0 :contact cand))
+         (query (get-text-property 0 :query cand))
+         (newcand (cons cand `(:msg ,msg :query ,query))))
+    (funcall consult-mu-contacts-action newcand))
   )
 
 ;; (defun consult-mu-embark-reply (cand)
@@ -129,6 +137,13 @@
         )
       )))
 
+(defun consult-mu-contacts-embark-compose (cand)
+    (let* ((contact (get-text-property 0 :contact cand)))
+      (unless (mu4e-running-p) (mu4e--server-start))
+      ;;(mu4e-compose-new)
+      ;;(insert contact)
+      ))
+
 ;; (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler)
 ;;            ((symbol-function #'mu4e-view) #'consult-mu--view-msg)
 ;;            ((symbol-function #'mu4e~set-sent-handler-message-sent-hook-fn) (lambda ())))
@@ -187,6 +202,15 @@
   "f" #'consult-mu-embark-forward
   )
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
+
+
+(defvar-keymap consult-mu-embark-contacts-actions-map
+  :doc "Keymap for consult-mu-embark-contacts"
+  :parent consult-mu-embark-general-actions-map
+  "c" #'consult-mu-contacts-embark-compose
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
 
 ;; macro for defining functions for marks
 (defmacro consult-mu-embark--defun-mark-for (mark)
@@ -254,6 +278,7 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 
 ;; change the default action on `consult-mu-messages' category.
 (add-to-list 'embark-default-action-overrides '(consult-mu-messages . consult-mu-embark-default-action))
+(add-to-list 'embark-default-action-overrides '(consult-mu-contacts . consult-mu-contacts-embark-default-action))
 
 ;;; Provide `consul-gh-embark' module
 
