@@ -14,39 +14,46 @@ Consult-mu provides a dynamically updated search interface to mu4e. It uses the 
 ** Main Interactive Commands
  There two main interactive commands:
 
-1. =consult-mu=: Provides a dynamic version of =mu4e-search=. As the user types inputs, the result gets updated. This command uses a modified version of =mu4e-search= and then takes the content of =mu4e-headers= buffer to populate minibuffer completion table. This allows the user to change the query or search properties (such as number of results, sort-field, sort-direction, ...) dynamically by changing the input in the minibuffer. In addition previews of the results can be viewed similar to other consult functions. Once a candidate is selected, the user will see the search result sin =mu4e-headers=, and =mu4e-view= buffers similar to mu4e-search results.
+1. =consult-mu-dynamic=: Provides a dynamic version of =mu4e-search=. As the user types inputs, the result gets updated. This command uses a modified version of =mu4e-search= and then takes the content of =mu4e-headers= buffer to populate minibuffer completion table. This allows the user to change the query or search properties (such as number of results, sort-field, sort-direction, ...) dynamically by changing the input in the minibuffer. In addition previews of the results can be viewed similar to other consult functions. Once a candidate is selected, the user will see the search result sin =mu4e-headers=, and =mu4e-view= buffers similar to mu4e-search results.
 
 2. =consult-mu-async=: This function provides a very fast search without loading mu4e-headers, which means mu4e functionalities (like marks, reply, forwards, etc.) are not available in the preview buffer. This is very useful for finding individual emails or threads in a large pool quickly (in other words "a needle in a haystack" scenarios!). Previews can be seen while the results are being populated asynchronously (without populating mu4e-headers buffer). Upon selection of a candidate, mu4e-headers buffer is populated with only an individual email (or thread). From here all the normal functionalities of mu4e is again available.
 
-The advantage of =consult-mu-async= over =consult-mu= is that it is very fast for searching several thousands messages (even faster than [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]]!), but cannot populate a mu4e-headers buffer with all the results. On the other hand, =consult-mu= is slower when there are thousands of hits for the search term but provides full functionality for all the results. Therefore depending on the use case, the user can chose which functions serves the purpose better.
+3. =consult-mu=: This is simply a wrapper that calls =consult-mu-default-command=, which can be set to either the dynamic or async command for quick access. In other words, set =consult-mu-default-command= to either 1 or 2 above depending on your use case and then use =consult-mu= for convinience and you don't need to remember the difference between the two anymore.
 
-Furthermore, consult-mu, also provides a number of useful [[https://github.com/oantolin/embark][Embark]] actions that can be called from within minibuffer (see examples below.). However, wehn using embark actions, be advised that sometimes you may get an error especially when using =consult-mu-async=. These are likely not critical errors and are usually caused because after running embark actions the databse can be out of sync with the results. In such cases syncing the database should resolve the issue.
+The advantage of =consult-mu-async= over =consult-mu-dynamic= is that it is very fast for searching several thousands of messages (even faster than [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]]!), but cannot populate a mu4e-headers buffer with all the results. On the other hand, =consult-mu-dynamic= is slower when there are thousands of hits for the search term but provides full functionality for all the results (provides full functionality of =mu4e-search=). Therefore, depending on the use case, the user can chose which functions serves the purpose better.
+
+Furthermore, =consult-mu=, also provides a number of useful [[https://github.com/oantolin/embark][Embark]] actions that can be called from within minibuffer (see examples below). However, when using embark actions, be advised that sometimes you may get an error especially when using =consult-mu-async=. These are likely not critical errors hapening when the databse is out of sync with the results. In such cases syncing the database should resolve the issue.
 
 ** Why we need a new package such as consult-mu?
-While mu4e built-in search is great and provides ways to edit search terms (e.g. =mu4e-search-edit=) or toggle search properties (e.g. =mu4e-search-toggle-property=), the interface is not really intuitive. We are simply too impatient in 2023 to use a static search field and edit in steps. A dynamically updated search results is somewhat expected with any modern tools. Try searching in Thunderbird, or Outlook, and you instantly see suggestions and results. This is what consult-mu provides. Hopefully, in the future a dynamics search approach comes built-in with mu4e but until then, this package intends to fill the gap.
+While mu4e's built-in search is great and provides ways to edit search terms (e.g. =mu4e-search-edit=) or toggle search properties (e.g. =mu4e-search-toggle-property=), the interface is not really intuitive. We are simply too impatient in 2024 to use a static search field and edit in steps. A dynamically updated search results is somewhat expected with any modern tools. Try searching in Thunderbird, or Outlook, and you instantly see suggestions and results. This is what consult-mu provides. Hopefully, in the future a dynamics search approach comes built-in with mu4e but until then, this package intends to fill the gap.
 
-*** Why about alternative approaches like [[https://github.com/seanfarley/counsel-mu][counsel-mu]] or [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]]?
+*** What about alternative approaches like [[https://github.com/seanfarley/counsel-mu][counsel-mu]] or [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]]?
 Both [[https://github.com/seanfarley/counsel-mu][counsel-mu]] and [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]] inspired this package. But this package provides soemthing more than those packages. Here is the comparison:
 
 - [[https://github.com/seanfarley/counsel-mu][counsel-mu]]: counsel-mu provides an async search for mu, and when the candidate is selected, the single message is loaded by using =mu4e-view-message-with-message-id=. =consult-mu= takes a similar approach in =consult-mu-async= but expands on that with the following features:
+
   a. ability to dynamically add command line options (e.g. using =query -- -s s -z= as input).
      This includes dynamically changing the number of results. This is important because with counsel-mu, one ha to change the variable =mu4e-search-results-limit= globally to see many results, which then affects every mu4e-search that is done.
-  b. ability to load a preview without leaving minibuffer search
-  d. ability to use emabrk actions on candidates from the minibuffer with =consult-mu-embark=
-  c. ability to see whole threads when selecting a candidate rather than just single messages
 
-  In addition, =consult-mu= provides the =consult-mu= interactive command that uses dynamic collection using =mu4e-search= (and not =mu= commands). This allows doing dynamic search in the minibuffer and then getting a full list of results similar to the built-in mu4e-search.
+  b. ability to load a preview without leaving minibuffer search
+
+  c. ability to use emabrk actions on candidates from the minibuffer with =consult-mu-embark=
+
+  d. ability to see whole threads when selecting a candidate rather than just single messages
+
+  In addition, =consult-mu= provides the =consult-mu-dynamic= interactive command that uses dynamic collection using =mu4e-search= (and not =mu= commands). This allows doing dynamic search in the minibuffer and then getting a full list of results similar to the built-in mu4e-search.
 
 
 - [[https://github.com/emacsmirror/consult-notmuch][consult-notmuch]]: consult-notmuch is great IF you use [[https://notmuchmail.org/notmuch-emacs/][notmuch-emacs]]. consult-mu on the other hand provides similar functionality for [[https://github.com/djcb/mu][mu/mu4e]].
-  The comparison therefore comes down to comparing mu4e and notmuch. While notmuch is light and fast, I think it lacks lots of basic functionalities of an email client. It is supposed to be *not much* after all! As a result, using notmuch as an everyday email client can be challenging especially if you want to use it along with other IMAP-based email clients (e.g. mobile apps). This is because the philosophy of using tags instead of folders requires a complete redesign of some workflows. For example Gmail uses labels but other services may not and even if they do, in IMAP-based clients labels are treated as different folders and therefore syncing back custom notmuch labels everywhere (e.g. between notmuch on your desktop machine and your mobile app client) becomes tricky. Of course in Emacs nothing is impossible and there are ways to improve the experience by adding additional custom elisp (see [[https://www.youtube.com/watch?v=g7iF11qamh8][Emacs: Notmuch demo (notmuch.el) - YouTube]]  and [[https://www.reddit.com/r/emacs/comments/qo3eza/notmuch_as_an_alternative_to_mu4e/?share_id=8WUviRO3gGGIO4bQgoSzU&utm_content=2&utm_medium=android_app&utm_name=androidcss&utm_source=share&utm_term=10][Notmuch as an alternative to mu4e : emacs]] for some examples), but at the end the results will still likely lack some features (like multi-account contexts, ...).
+  The comparison therefore comes down to comparing mu4e and notmuch. While notmuch is light and fast, I think it lacks lots of basic functionalities of an email client. It is supposed to be *not much* after all! As a result, using notmuch as an everyday email client can be challenging especially if you want to use it along with other IMAP-based email clients (e.g. mobile apps). This is because the philosophy of using tags instead of folders requires a complete redesign of some workflows. While some services, like Gmail, use labels, others may not and even if they do, in IMAP-based clients labels are treated as different folders and therefore syncing back custom notmuch labels everywhere (e.g. between notmuch on your desktop machine and your mobile app client) becomes tricky. Of course, in Emacs nothing is impossible and there are ways to improve the experience by adding additional custom elisp (see [[https://www.youtube.com/watch?v=g7iF11qamh8][Emacs: Notmuch demo (notmuch.el) - YouTube]]  and [[https://www.reddit.com/r/emacs/comments/qo3eza/notmuch_as_an_alternative_to_mu4e/?share_id=8WUviRO3gGGIO4bQgoSzU&utm_content=2&utm_medium=android_app&utm_name=androidcss&utm_source=share&utm_term=10][Notmuch as an alternative to mu4e : emacs]] for some examples), but at the end, the results will still likely lack some important features (like multi-account contexts, ...).
 
-More importantly, a major reason to choose notmuch over mu4e is its speed, but using the underlying =mu= server and command line can also be very fast. In fact (at least in my tests), =consult-mu-async=, which uses the command line =mu= commands was faster than =consult-notmuch= , and therefore using =mu4e= with =consult-mu= provides the best of both worlds to me. When I need speed, I can use =consult-mu-async= to do a fast search (and find thousands of hits) and quickly narrow down to what I am looking for; and when I need a more complete and full-feature client I can use =mu4e= built-in functionalities, especially with addition of dynamically built searches with =consult-mu=, I have a modern intuitive interface as well.
+More importantly, a common reason to choose notmuch over mu4e is its speed, but using the underlying =mu= server and command line can also be very fast. In fact, at least in my own tests, =consult-mu-async=, which uses the command line =mu= commands was faster than =consult-notmuch=, and therefore using =mu4e= with =consult-mu= provides the best of both worlds to me. When I need speed, I can use =consult-mu-async= to do a fast search (and find thousands of hits) and quickly narrow down to what I am looking for; and when I need a more complete and full-feature client I can use =mu4e= built-in functionalities, especially with addition of dynamically built searches with =consult-mu-dynamic=, I have a modern intuitive interface as well.
 
 * Getting Started
 ** Installation
 Before you start, make sure you understand that this is work in progress in its early stage and bugs and breaks are very much expected.
-*note that*: Because [[https://github.com/djcb/mu][mu4e]] tends to take over buffer/windows management, I had to reimplement (a.k.a. hack) some of the functionalities in order to provide quick previews that stay out of your the way when the minibuffer command is done (or canceled), and as a result there is a good chance that errors will arise in edge cases that I have not tested.
+
+*note that*: Because [[https://github.com/djcb/mu][mu4e]] tends to take over buffer/windows management, I had to reimplement (a.k.a. hack) some of the functionalities in order to provide quick previews that stay out of your way when the minibuffer command is done (or canceled), and as a result there is a good chance that errors will arise in edge cases that I have not tested.
 
 *** Requirements
 In order to use consult-mu, you need the following requirements:
@@ -63,14 +70,14 @@ You can access the official documentation for mu4e here: [[https://www.djcbsoftw
 
 To install consult follow the official instructions here: [[https://github.com/minad/consult#configuration][Configuration of Consult.]]
 
-Also, make sure you review Consult's README since it recommends some other packages and useful configurations for different settings. Some of those may improve your experience of consult-mu as well. In particular the section about [[https://github.com/minad/consult#asynchronous-search][asynchronous search]] is important for learning how to use inputs to search for result and narrow down in minibuffer.
+Also, make sure you review Consult's README since it recommends some other packages and useful configurations for different settings. Some of those may improve your experience of consult-mu as well. In particular, the section about [[https://github.com/minad/consult#asynchronous-search][asynchronous search]] is important for learning how to use inputs to search for result and narrow down in minibuffer.
 
 
 *** Installing consult-mu package
-Consult-mu is not currently on [[https://elpa.gnu.org/packages/consult.html][ELPA]] or [[https://melpa.org/#/consult][MELPA]]. Therefore, you need to install it using an alternative non-standard package managers such as [[https://github.com/radian-software/straight.el][straight.el]] or use manual installation.
+consult-mu is not currently on [[https://elpa.gnu.org/packages/consult.html][ELPA]] or [[https://melpa.org/#/consult][MELPA]]. Therefore, you need to install it using an alternative non-standard package manager such as [[https://github.com/radian-software/straight.el][straight.el]] or use manual installation.
 
 **** straight.el
-To install consult-mu with straight.el you can use the following command. Make sure you load consult-mu *after loading mu4e and consult (e.g. =require consult=, =require mu4e=)*
+To install consult-mu with straight.el you can use the following command. Make sure you load consult-mu after loading mu4e and consult (e.g. =require consult=, =require mu4e=).
 
 #+begin_src emacs-lisp
 (straight-use-package
@@ -91,10 +98,10 @@ You can also fork this repository and use your own repo.
 **** manual installation
 Clone this repo and make sure the files are on your load path, as described on [[https://www.emacswiki.org/emacs/LoadPath][EmacsWiki]].
 
-*Make sure you load consult and mu4e (e.g. =require consult=, =require mu4e=) before you load consult-mu.*
+Make sure you load consult and mu4e (e.g. =require consult=, =require mu4e=) before you load consult-mu.
 
 ** Configuration
-consult-mu is built with the idea that the user should be able to customize everything based on their use-case, therefore the user is very much expected to configure consult-mu according to their use case.
+consult-mu is built with the idea that the user should be able to customize everything based on their use-case, therefore the user is very much expected to configure consult-mu.
 
 I recommend you read through this section and understand how to configure the package according to your needs and for your specific use-case, but if you just want a drop-in minimal config, look at the snippet below:
 
@@ -136,7 +143,7 @@ Maximum number of messages shown in search results (in consult-mu minibuffer com
 #+end_example
 
 **** =consult-mu-headers-fields=
-This variable is used to format the headers inside minibuffer. This takes a similar format to =mu4e-headers-fields= and changes the format of the header only in minibuffer (=consult-mu= or =consult-mu-async=).
+This variable is used to format the headers inside minibuffer. This takes a similar format to =mu4e-headers-fields= and changes the format of the header only in minibuffer (=consult-mu-dynamic= or =consult-mu-async=).
 
 Note that it is generally recommended to use =consult-mu-headers-template= below because it has more options and does not affect the consult-mu-headers buffer.
 
@@ -304,9 +311,9 @@ Here is a good customization for great performance as well as functionality:
   (consult-mu-preview-key 'any)
   ;;do not mark email as read when previewed. If you turn this to t, be aware that the auto-loaded preview if the preview-key above is 'any would also get marked as read!
   (consult-mu-mark-previewed-as-read nil)
-  ;;amrk email as read when selected.
+  ;;mark email as read when selected.
   (consult-mu-mark-viewed-as-read t)
-  ;; define a template for headers view in minibuffer. The exmaple below adjusts the width based on the width of the screen.
+  ;; define a template for headers view in minibuffer. The example below adjusts the width based on the width of the screen.
   (consult-mu-headers-template (concat "%f" (number-to-string (floor (* (frame-width) 0.18))) "%s" (number-to-string (floor (* (frame-width) 0.6))) "%d13" "%g" "%x"))
   :config
   ;;create a list of saved searches for quick access using `histroy-next-element' with `M-n' in minibuffer. Note the "#" character at the beginning of each query!
@@ -344,13 +351,13 @@ Once consult-mu retrieves a list of results, you can further narrow down the lis
 #tickets -- -z #concert
 #+end_example
 
-In the example above, we first run a search *tickets* and sort the results with reverse order (using =-z= option) then narrows down the list of candidates by the word, *concert*.
+In the example above, we first run a search for *tickets* and sort the results with reverse order (using =-z= option) then narrow down the list of candidates by the word, *concert*.
 
 Note that narrow downs are similar to other narrow downs in the minibuffer, therefore here you cannot use mu4e search syntax but you can use regular expressions. Also, the narrow down searches in the entire header string, therefore you can use any information available in the headers (date, title, email addresses, flags,...) for narrow down. (to change the format of the header, take a look at [[id:155CF359-63D0-4D4D-B0BD-7C089E2D9B3C][=consult-mu-headers-template=]]. Here is a screenshot for doing a search and narrow:
 
 
 ** Saved Searches and Quick Access History
-Consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
+Consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu-dynamic= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu-dynamic or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
 
 Here is a screenshot of quickly going through some saved searches (using =next-history-element= which is bound to =M-n= by default).
 
@@ -359,7 +366,7 @@ consult-mu provides integration with [[https://github.com/oantolin/embark][embar
 
 For marking, note that, by default when consult-mu-embark is loaded, it creates a function for every item in the =mu4e-marks= and binds them to the =:char= for that mark in =consult-mu-embark-messages-actions-map=.
 
-You can also use =embark-select= and =embark-act-all= to run the same command on multiple messages, but this only works in consult-mu and not so well with consult-mu-async because with consult-my-async, only one message at a time is added to the headers view and therefore running commands on multiple candidates with embark is not supported.
+You can also use =embark-select= and =embark-act-all= to run the same command on multiple messages, but this only works in consult-mu-dynamic and not so well with consult-mu-async because with consult-my-async, only one message at a time is added to the headers view and therefore running commands on multiple candidates with embark is not supported.
 
 ** Extras
 In addition to improvements for searching, consult-mu also provides extra features for composing, contacts, ... These features are defined in the files under the =extras= folder.
