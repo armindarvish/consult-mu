@@ -54,3 +54,5 @@
 ;;; Provide `consult-mu-contacts-embark' module
 
 (provide 'consult-mu-contacts-embark)
+
+;;;  consult-mu-contacts-embark.el ends here

@@ -186,3 +186,8 @@ FILE is the initial input in the minibuffer."
       (when-let (file (consult-mu-attach--read-file-remove))
            (consult-mu-attach--remove-file file))
       ))
+
+;;; provide `consult-mu-attachment' module
+(provide 'consult-mu-attachment)
+
+;;;  consult-mu-attachment.el ends here

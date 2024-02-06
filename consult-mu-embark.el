@@ -276,3 +276,5 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 ;;; Provide `consult-mu-embark' module
 
 (provide 'consult-mu-embark)
+
+;;;  consult-mu-embark.el ends here

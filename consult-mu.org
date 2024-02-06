@@ -1638,7 +1638,7 @@ For example, the `consult-mu-default-command can be set to
 #+end_src
 ** Footer
 #+begin_src emacs-lisp
-;;; filename ends here
+;;; consult-mu ends here
 #+end_src
 
 * consult-mu-embark.el
@@ -1930,6 +1930,8 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 ;;; Provide `consult-mu-embark' module
 
 (provide 'consult-mu-embark)
+
+;;;  consult-mu-embark.el ends here
 #+end_src
 
 
@@ -2166,6 +2168,15 @@ FILE is the initial input in the minibuffer."
       (when-let (file (consult-mu-attach--read-file-remove))
            (consult-mu-attach--remove-file file))
       ))
+#+end_src
+** Provide
+#+begin_src emacs-lisp
+;;; provide `consult-mu-attachment' module
+(provide 'consult-mu-attachment)
+#+end_src
+** Footer
+#+begin_src emacs-lisp
+;;;  consult-mu-attachment.el ends here
 #+end_src
 
 * consult-mu-contacts.el
@@ -2520,6 +2531,16 @@ For more details on consult--async functionalities, see `consult-grep' and the o
         (funcall consult-mu-contacts-action sel)
         sel))))
 #+end_src
+
+** Provide
+#+begin_src emacs-lisp
+;;; provide `consult-mu-contacts' module
+(provide 'consult-mu-contacts)
+#+end_src
+** Footer
+#+begin_src emacs-lisp
+;;;  consult-mu-contacts.el ends here
+#+end_src
 * consult-mu-contacts-embark.el
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :mkdirp yes :link yes :tangle ./extras/consult-mu-contacts-embark.el
@@ -2587,4 +2608,6 @@ This section includes additional useful embark actions as well as possible keyma
 ;;; Provide `consult-mu-contacts-embark' module
 
 (provide 'consult-mu-contacts-embark)
+
+;;;  consult-mu-contacts-embark.el ends here
 #+end_src

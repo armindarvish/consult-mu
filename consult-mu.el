@@ -1480,4 +1480,4 @@ For example, the `consult-mu-default-command can be set to
 ;;; provide `consult-mu' module
 (provide 'consult-mu)
 
-;;; filename ends here
+;;; consult-mu ends here

@@ -290,3 +290,8 @@ For more details on consult--async functionalities, see `consult-grep' and the o
       (progn
         (funcall consult-mu-contacts-action sel)
         sel))))
+
+;;; provide `consult-mu-contacts' module
+(provide 'consult-mu-contacts)
+
+;;;  consult-mu-contacts.el ends here
