@@ -1,4 +1,4 @@
-;;; consult-mu-attachment.el --- Consult Mu4e asynchronously in GNU Emacs -*- lexical-binding: t -*-
+;;; consult-mu-compose.el --- Consult Mu4e asynchronously in GNU Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Armin Darvish
 
@@ -36,7 +36,7 @@
 (pulse-momentary-highlight-overlay ov 'highlight))
 )
 
-(defun consult-mu-attach--read-file-attach (&optional initial)
+(defun consult-mu-compose--read-file-attach (&optional initial)
 "Read files in the minibuffer to attach to an email.
 
 INITIAL is the initial input in the minibuffer."
@@ -64,7 +64,7 @@ INITIAL is the initial input in the minibuffer."
 :preview-key "C-o"
 ))
 
-(defun consult-mu-attach--read-file-remove (&optional file)
+(defun consult-mu-compose--read-file-remove (&optional file)
 "Select attached files to remove from email.
 
 FILE is the initial input in the minibuffer."
@@ -120,7 +120,7 @@ FILE is the initial input in the minibuffer."
        file)
     )))
 
-(defun consult-mu-attach--add-file (file &rest args)
+(defun consult-mu-compose--attach-file (file &rest args)
   "Attach FILE to email."
   (save-excursion
     (pcase major-mode
@@ -148,7 +148,7 @@ FILE is the initial input in the minibuffer."
              )
     )))
 
-(defun consult-mu-attach--remove-file (file &rest args)
+(defun consult-mu-compose--remove-file (file &rest args)
 "Remove File from current attachments"
   (save-excursion
     (pcase major-mode
@@ -170,24 +170,24 @@ FILE is the initial input in the minibuffer."
          ))
       )))
 
-(defun consult-mu-attach-add (&optional file)
+(defun consult-mu-compose-attach (&optional file)
 "Attach FILE to email interactively."
   (interactive)
   (save-mark-and-excursion
-    (let* ((file (or file (consult-mu-attach--read-file-attach))))
-      (while (or (null file) (file-directory-p file)) (setq file (consult-mu-attach--read-file-attach file)))
-      (consult-mu-attach--add-file file)
+    (let* ((file (or file (consult-mu-compose--read-file-attach))))
+      (while (or (null file) (file-directory-p file)) (setq file (consult-mu-compose--read-file-attach file)))
+      (consult-mu-compose--attach-file file)
       )))
 
-(defun consult-mu-attach-remove (&optional file)
+(defun consult-mu-compose-detach (&optional file)
 "Remove FILE from email attachments interactively."
   (interactive)
   (save-mark-and-excursion
-      (when-let (file (consult-mu-attach--read-file-remove))
-           (consult-mu-attach--remove-file file))
+      (when-let (file (consult-mu-compose--read-file-remove))
+           (consult-mu-compose--remove-file file))
       ))
 
-;;; provide `consult-mu-attachment' module
-(provide 'consult-mu-attachment)
+;;; provide `consult-mu-compose' module
+(provide 'consult-mu-compose)
 
-;;;  consult-mu-attachment.el ends here
+;;;  consult-mu-compose.el ends here
