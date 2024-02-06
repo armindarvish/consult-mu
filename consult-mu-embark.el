@@ -38,13 +38,6 @@
     (funcall consult-mu-action newcand))
   )
 
-(defun consult-mu-contacts-embark-default-action (cand)
-  "Run `consult-mu-contacts-action' on the candidate."
-  (let* ((contact (get-text-property 0 :contact cand))
-         (query (get-text-property 0 :query cand))
-         (newcand (cons cand `(:msg ,msg :query ,query))))
-    (funcall consult-mu-contacts-action newcand))
-  )
 
 ;; (defun consult-mu-embark-reply (cand)
 ;;   "Reply to message in CAND."
@@ -280,6 +273,6 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 (add-to-list 'embark-default-action-overrides '(consult-mu-messages . consult-mu-embark-default-action))
 (add-to-list 'embark-default-action-overrides '(consult-mu-contacts . consult-mu-contacts-embark-default-action))
 
-;;; Provide `consul-gh-embark' module
+;;; Provide `consult-mu-embark' module
 
 (provide 'consult-mu-embark)
