@@ -1,4 +1,4 @@
-;;; consult-mu-contacts-embark.el --- Emabrk Actions for consult-mu -*- lexical-binding: t -*-
+;;; consult-mu-contacts-embark.el --- Emabrk Actions for consult-mu-contacts -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2021-2023
 
