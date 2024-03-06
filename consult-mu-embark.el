@@ -291,8 +291,6 @@
 
                 )))))
 
-;; use consult-mu-embark--defun-func-for-marks to make a function for each `mu4e-marks' element.
-(consult-mu-embark--defun-func-for-marks (mapcar 'car mu4e-marks))
 
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
