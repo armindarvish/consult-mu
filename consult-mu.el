@@ -496,7 +496,7 @@ Returns a exapnded list of strings containing the description of each flag chara
                       :prompt "Header Field: ")))))
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
-      (re-search-forward  (concat "^" field ": "))
+      (re-search-forward (concat "^" field ": ") nil t)
       (buffer-substring-no-properties (point) (point-at-eol)))))
 
 (defun consult-mu--headers-append-handler (msglst)

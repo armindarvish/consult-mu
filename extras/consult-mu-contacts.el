@@ -149,9 +149,15 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
   (let ((add (list)))
     (pcase major-mode
       ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
-       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item))) (append add (string-split (consult-mu--message-get-header-field "from") ",\\|;") (string-split (consult-mu--message-get-header-field "to") ",\\|;")
-       )
-      ))
+       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item)))
+               (append add
+                       (string-split (consult-mu--message-get-header-field "from") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "to") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "cc") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "bcc") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "reply-to") ",\\|;")
+                       )
+               ))
       (_
        (list)))))
 

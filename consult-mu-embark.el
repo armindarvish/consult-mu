@@ -185,7 +185,7 @@
 
       (with-current-buffer consult-mu-view-buffer-name
         (goto-char (point-min))
-        (re-search-forward "^\\(Attachment\\|Attachments\\): ")
+        (re-search-forward "^\\(Attachment\\|Attachments\\): " nil t)
         (consult-mu--pulse-region (point) (point-at-eol))
         (mu4e-view-save-attachments t)
         )

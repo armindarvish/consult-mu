@@ -556,7 +556,7 @@ Returns a exapnded list of strings containing the description of each flag chara
                       :prompt "Header Field: ")))))
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
-      (re-search-forward  (concat "^" field ": "))
+      (re-search-forward (concat "^" field ": ") nil t)
       (buffer-substring-no-properties (point) (point-at-eol)))))
 #+end_src
 
@@ -1904,7 +1904,7 @@ This section includes additional useful embark actions as well as possible keyma
 
       (with-current-buffer consult-mu-view-buffer-name
         (goto-char (point-min))
-        (re-search-forward "^\\(Attachment\\|Attachments\\): ")
+        (re-search-forward "^\\(Attachment\\|Attachments\\): " nil t)
         (consult-mu--pulse-region (point) (point-at-eol))
         (mu4e-view-save-attachments t)
         )
@@ -2864,9 +2864,15 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
   (let ((add (list)))
     (pcase major-mode
       ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
-       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item))) (append add (string-split (consult-mu--message-get-header-field "from") ",\\|;") (string-split (consult-mu--message-get-header-field "to") ",\\|;")
-       )
-      ))
+       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item)))
+               (append add
+                       (string-split (consult-mu--message-get-header-field "from") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "to") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "cc") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "bcc") ",\\|;")
+                       (string-split (consult-mu--message-get-header-field "reply-to") ",\\|;")
+                       )
+               ))
       (_
        (list)))))
 #+end_src
