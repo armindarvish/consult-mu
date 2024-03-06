@@ -45,4 +45,4 @@
 
 (provide 'consult-mu-compose-embark)
 
-;;;  consult-mu-contacts-embark.el ends here
+;;;  consult-mu-compose-embark.el ends here

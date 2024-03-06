@@ -2682,7 +2682,7 @@ FILE is the initial input in the minibuffer."
 
 (provide 'consult-mu-compose-embark)
 
-;;;  consult-mu-contacts-embark.el ends here
+;;;  consult-mu-compose-embark.el ends here
 #+end_src
 
 * consult-mu-contacts.el
