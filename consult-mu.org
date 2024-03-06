@@ -76,7 +76,7 @@ By defualt inherits from `mu4e-search-sort-field'."
                 (const :from)
                 (const :to)
                 (const :list)
-                )
+                ))
 
 (defcustom consult-mu-headers-fields mu4e-headers-fields
   "A list of header fields to show in the headers buffer.
