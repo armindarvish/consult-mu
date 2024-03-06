@@ -250,7 +250,6 @@
 ;;             )
 ;;         )))))
 
-;;;###autoload
 ;; macro for defining functions for marks
 (defmacro consult-mu-embark--defun-mark-for (mark)
   "Define a function mu4e-view-mark-for- MARK."
