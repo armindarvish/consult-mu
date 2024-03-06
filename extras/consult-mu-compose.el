@@ -43,58 +43,6 @@ This is similar `consult-mu-preview-key' but explicitly for consult-mu-compose."
 (defvar consult-mu-compose-current-draft-buffer nil
   "Stores the buffer that is being edited.")
 
-(defun consult-mu--pulse-regexp (regexp)
-  "Finds and pulses REGEXP"
-  (goto-char (point-min))
-  (while (re-search-forward regexp nil t)
-    (when-let* ((m (match-data))
-           (beg (car m))
-           (end (cadr m))
-           (ov (make-overlay beg end))
-           (pulse-delay 0.075)
-           )
-      (pulse-momentary-highlight-overlay ov 'highlight))
-    ))
-
-(defun consult-mu--pulse-line ()
-"Pulse line momentarily"
-(let* ((pulse-delay 0.055)
-      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)) )))
-(pulse-momentary-highlight-overlay ov 'highlight))
-)
-
-;; (defun consult-mu-compose--read-file-attach (&optional initial)
-;;   "Read files in the minibuffer to attach to an email.
-
-;; INITIAL is the initial input in the minibuffer."
-;;   (consult--read (completion-table-in-turn #'completion--embedded-envvar-table
-;;                                            #'completion--file-name-table)
-;;                  :prompt "Attach File: "
-;;                  :require-match t
-;;                  :category 'file
-;;                  :initial (or initial default-directory)
-;;                  :lookup (lambda (sel cands &rest args)
-;;                            (file-truename sel))
-;;                  :state (lambda (action cand)
-;;                           (let ((preview (consult--buffer-preview)))
-;;                             (pcase action
-;;                               ('setup
-;;                                (setq consult-mu-compose-current-draft-buffer (current-buffer))
-;;                                )
-;;                               ('preview
-;;                                (if cand
-;;                                    (when (not (file-directory-p cand))
-;;                                      (funcall preview action
-;;                                               (find-file-noselect (file-truename cand))
-;;                                               ))))
-;;                               ('return
-;;                                cand
-;;                                )
-;;                               )))
-;;                  :preview-key consult-mu-compose-preview-key
-;;                  :history 'consult-mu-compose-attach-history
-;;                  ))
-
 (defun consult-mu-compose--read-file-attach (&optional initial)
   "Read files in the minibuffer to attach to an email.
 
@@ -121,6 +69,7 @@ INITIAL is the initial input in the minibuffer."
                                )
                               )))
                  :preview-key consult-mu-compose-preview-key
+                 :add-history (list mu4e-attachment-dir)
                  :history 'consult-mu-compose-attach-history
                  ))
 

@@ -21,12 +21,13 @@
 
 
 (defun consult-mu-contacts-embark-compose (cand)
-    (let* ((contact (get-text-property 0 :contact cand)))
-      (unless (mu4e-running-p) (mu4e--server-start))
-      ;;(mu4e-compose-new)
-      ;;(insert contact)
-      ))
+  (let* ((contact (get-text-property 0 :contact cand)))
+     (consult-mu-contacts--compose-to contact)))
 
+(defun consult-mu-contacts-embark-search-messages (cand)
+  (let* ((contact (get-text-property 0 :contact cand))
+         (email (plist-get contact :email)))
+     (consult-mu (concat "from:" email))))
 
 (defun consult-mu-contacts-embark-default-action (cand)
   "Run `consult-mu-contacts-action' on the candidate."
@@ -36,13 +37,13 @@
     (funcall consult-mu-contacts-action newcand))
   )
 
-
 ;;; Define Embark Keymaps
 
 (defvar-keymap consult-mu-embark-contacts-actions-map
   :doc "Keymap for consult-mu-embark-contacts"
   :parent consult-mu-embark-general-actions-map
   "c" #'consult-mu-contacts-embark-compose
+  "s" #'consult-mu-contacts-embark-search-messages
   )
 
 (add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))

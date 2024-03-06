@@ -67,7 +67,7 @@ This is normally passed to \"--maxnum\" in the command line or is defined by `mu
 
 (defcustom consult-mu-search-sort-field mu4e-search-sort-field
   "What field to sort results by?
-By defualt inherits from `mu4e-search-sort-files'."
+By defualt inherits from `mu4e-search-sort-field'."
   :group 'consult-mu
   :type '(radio (const :date)
                 (const :subject)
@@ -75,7 +75,8 @@ By defualt inherits from `mu4e-search-sort-files'."
                 (const :prio)
                 (const :from)
                 (const :to)
-                (const :list)))
+                (const :list)
+                )
 
 (defcustom consult-mu-headers-fields mu4e-headers-fields
   "A list of header fields to show in the headers buffer.
@@ -363,6 +364,43 @@ By default inherits from `link'.")
 ** Backend functions
 This section includes functions (utilities, mu4e hacks, ...).
 *** general utility
+**** pulses
+***** pulse-regexp
+#+begin_src emacs-lisp
+(defun consult-mu--pulse-regexp (regexp)
+  "Finds and pulses REGEXP"
+  (goto-char (point-min))
+  (while (re-search-forward regexp nil t)
+    (when-let* ((m (match-data))
+           (beg (car m))
+           (end (cadr m))
+           (ov (make-overlay beg end))
+           (pulse-delay 0.075)
+           )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    ))
+#+end_src
+***** pulse-region
+#+begin_src emacs-lisp
+(defun consult-mu--pulse-region (beg end)
+  "Finds and pulses region from BEG to END"
+  (let ((ov (make-overlay beg end))
+        (pulse-delay 0.075)
+        )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    )
+
+#+end_src
+***** pulse-line
+#+begin_src emacs-lisp
+(defun consult-mu--pulse-line ()
+"Pulse line momentarily"
+(let* ((pulse-delay 0.055)
+      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
+(pulse-momentary-highlight-overlay ov 'highlight))
+)
+#+end_src
+
 **** formatting strings
 ***** fix string length
 #+begin_src emacs-lisp
@@ -493,7 +531,36 @@ Returns a exapnded list of strings containing the description of each flag chara
              ("c" 'calendar)
              (_ nil))))
 #+end_src
-*** mu4e backend
+**** extract email from string
+#+begin_src emacs-lisp
+(defun consult-mu--message-extract-email-from-string (string)
+  (string-match "[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+" string)
+  (match-string 0 string))
+#+end_src
+**** split string of emails to list of emails
+#+begin_src emacs-lisp
+(defun consult-mu--message-emails-string-to-list (string)
+  (mapcar #'consult-mu--message-extract-email-from-string
+          (split-string string ",\\|;\\|\t"))
+  )
+#+end_src
+**** get header field from message
+#+begin_src emacs-lisp
+(defun consult-mu--message-get-header-field (&optional field)
+  (when (or (derived-mode-p 'message-mode)
+            (derived-mode-p 'mu4e-view-mode)
+            (derived-mode-p 'org-msg-edit-mode)
+            (derived-mode-p'mu4e-compose-mode))
+    (let ((field (or field
+                     (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
+                      :prompt "Header Field: ")))))
+      (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
+      (goto-char (point-min))
+      (re-search-forward  (concat "^" field ": "))
+      (buffer-substring-no-properties (point) (point-at-eol)))))
+#+end_src
+
+*** mu4e and message backend
 **** append-handler
 #+begin_src emacs-lisp
 (defun consult-mu--headers-append-handler (msglst)
@@ -611,6 +678,8 @@ chronologically (:date) by the newest message in the thread.
        :to)
       ((or "list" "v")
        :list)
+      ;; ((or "tags" "x")
+      ;;  :tags)
       (_
        consult-mu-search-sort-field)
       )))
@@ -842,12 +911,8 @@ will be converted to
 (let* ((string (replace-regexp-in-string ">,\s\\|>;\s" ">\n" string))
          (list (string-split string "\n" t)))
     (mapcar (lambda (item)
-              (cond
-               ((string-match "\\(?2:.*\\)\s+<\\(?1:.+\\)>" item)
-                (list :email (or (match-string 1 item) nil) :name (or (match-string 2 item) nil)))
-               ((string-match "^\\(?1:.+@.+\..+$\\)" item)
-                 (list :email (or (match-string 1 item) nil) :name nil))
-               )) list)))
+              (let ((email (consult-mu--message-extract-email-from-string item)))
+                 (list :email email :name (string-trim (replace-regexp-in-string (concat email "\\|>" "\\|<") "" string nil t nil nil))))) list)))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -1734,11 +1799,11 @@ This section includes additional useful embark actions as well as possible keyma
 
 (defun consult-mu-embark-reply (cand)
   "Reply to message in CAND."
-  (save-mark-and-excursion
     (let* ((msg (get-text-property 0 :msg cand))
            (query (get-text-property 0 :query cand))
            (type (get-text-property 0 :type cand))
-           (newcand (cons cand `(:msg ,msg :query ,query :type ,type))))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
+           (compose-buff nil))
       (if (equal type :async)
           (consult-mu--update-headers query t msg :async)
         )
@@ -1748,7 +1813,7 @@ This section includes additional useful embark actions as well as possible keyma
           (mu4e-headers-goto-message-id))
         (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
             (progn
-              (mu4e-compose-reply)
+              (setq compose-buff (mu4e-compose-reply))
               (mu4e~headers-update-handler msg nil nil)
               )
         ))
@@ -1756,7 +1821,11 @@ This section includes additional useful embark actions as well as possible keyma
       (with-current-buffer consult-mu-view-buffer-name
         (quit-window)
         )
-      )))
+      (if (and compose-buff (buffer-live-p compose-buff))
+          (progn (switch-to-buffer compose-buff)
+                 (select-window (get-buffer-window compose-buff)))
+        )
+      ))
 
 (defun consult-mu-embark-forward (cand)
   "Reply to message in CAND."
@@ -1764,7 +1833,8 @@ This section includes additional useful embark actions as well as possible keyma
     (let* ((msg (get-text-property 0 :msg cand))
            (query (get-text-property 0 :query cand))
            (type (get-text-property 0 :type cand))
-           (newcand (cons cand `(:msg ,msg :query ,query :type ,type))))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
+           (compose-buff nil))
       (if (equal type :async)
           (consult-mu--update-headers query t msg :async)
         )
@@ -1774,7 +1844,7 @@ This section includes additional useful embark actions as well as possible keyma
           (mu4e-headers-goto-message-id))
         (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
             (progn
-              (mu4e-compose-forward)
+              (setq compose-buff (mu4e-compose-forward))
               (mu4e~headers-update-handler msg nil nil)
               )
         ))
@@ -1782,14 +1852,81 @@ This section includes additional useful embark actions as well as possible keyma
       (with-current-buffer consult-mu-view-buffer-name
         (quit-window)
         )
+      (if (and compose-buff (buffer-live-p compose-buff))
+          (progn (switch-to-buffer compose-buff)
+                 (select-window (get-buffer-window compose-buff)))
+        )
       )))
 
-(defun consult-mu-contacts-embark-compose (cand)
-    (let* ((contact (get-text-property 0 :contact cand)))
-      (unless (mu4e-running-p) (mu4e--server-start))
-      ;;(mu4e-compose-new)
-      ;;(insert contact)
+(defun consult-mu-embark-kill-message-field (cand)
+  "Get a header field of message in CAND."
+    (let* ((msg (get-text-property 0 :msg cand))
+           (query (get-text-property 0 :query cand))
+           (type (get-text-property 0 :type cand))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
+           )
+      (if (equal type :async)
+          (consult-mu--update-headers query t msg :async)
+        )
+      (with-current-buffer consult-mu-headers-buffer-name
+        (unless (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+          (mu4e-headers-goto-message-id))
+        (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+            (progn
+              (mu4e~headers-update-handler msg nil nil)
+              )
+        ))
+
+      (with-current-buffer consult-mu-view-buffer-name
+        (kill-new (consult-mu--message-get-header-field))
+        (consult-mu--pulse-region (point) (point-at-eol))
+        )
       ))
+
+(defun consult-mu-embark-save-attachmnts (cand)
+  "Save attachments of CAND."
+    (let* ((msg (get-text-property 0 :msg cand))
+           (query (get-text-property 0 :query cand))
+           (type (get-text-property 0 :type cand))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
+           )
+      (if (equal type :async)
+          (consult-mu--update-headers query t msg :async)
+        )
+      (with-current-buffer consult-mu-headers-buffer-name
+        (unless (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+          (mu4e-headers-goto-message-id))
+        (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+            (progn
+              (mu4e~headers-update-handler msg nil nil)
+              )
+        ))
+
+      (with-current-buffer consult-mu-view-buffer-name
+        (goto-char (point-min))
+        (re-search-forward "^\\(Attachment\\|Attachments\\): ")
+        (consult-mu--pulse-region (point) (point-at-eol))
+        (mu4e-view-save-attachments t)
+        )
+      ))
+
+(defun consult-mu-embark-search-messages-from-contact (cand)
+  "Searh messages from the same contact as the message in CAND."
+    (let* ((msg (get-text-property 0 :msg cand))
+           (from (car (plist-get msg :from)))
+           (email (plist-get from :email))
+           )
+      (consult-mu (concat "from:" email)))
+      )
+
+(defun consult-mu-embark-search-messages-with-subject (cand)
+  "Searh messages from the same contact as the message in CAND."
+    (let* ((msg (get-text-property 0 :msg cand))
+           (subject (plist-get msg :subject))
+           )
+      (consult-mu (concat "subject:" subject)))
+      )
+
 
 ;; (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler)
 ;;            ((symbol-function #'mu4e-view) #'consult-mu--view-msg)
@@ -1832,33 +1969,7 @@ This section includes additional useful embark actions as well as possible keyma
 ;;             )
 ;;         )))))
 
-;;; Define Embark Keymaps
-
-(defvar-keymap consult-mu-embark-general-actions-map
-  :doc "Keymap for consult-mu-embark"
-  :parent embark-general-map
-  )
-
-(add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
-
-
-(defvar-keymap consult-mu-embark-messages-actions-map
-  :doc "Keymap for consult-mu-embark-messages"
-  :parent consult-mu-embark-general-actions-map
-  "r" #'consult-mu-embark-reply
-  "f" #'consult-mu-embark-forward
-  )
-(add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
-
-
-(defvar-keymap consult-mu-embark-contacts-actions-map
-  :doc "Keymap for consult-mu-embark-contacts"
-  :parent consult-mu-embark-general-actions-map
-  "c" #'consult-mu-contacts-embark-compose
-  )
-
-(add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
-
+;;;###autoload
 ;; macro for defining functions for marks
 (defmacro consult-mu-embark--defun-mark-for (mark)
   "Define a function mu4e-view-mark-for- MARK."
@@ -1900,6 +2011,9 @@ This section includes additional useful embark actions as well as possible keyma
 
                 )))))
 
+;; use consult-mu-embark--defun-func-for-marks to make a function for each `mu4e-marks' element.
+(consult-mu-embark--defun-func-for-marks (mapcar 'car mu4e-marks))
+
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
   "Runs the macro `consult-mu-embark--defun-mark-for' on a list of marks.
@@ -1909,6 +2023,29 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 
 ;; use consult-mu-embark--defun-func-for-marks to make a function for each `mu4e-marks' element.
 (consult-mu-embark--defun-func-for-marks (mapcar 'car mu4e-marks))
+
+;;; Define Embark Keymaps
+(defvar-keymap consult-mu-embark-general-actions-map
+  :doc "Keymap for consult-mu-embark"
+  :parent embark-general-map
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
+
+
+(defvar-keymap consult-mu-embark-messages-actions-map
+  :doc "Keymap for consult-mu-embark-messages"
+  :parent consult-mu-embark-general-actions-map
+  "r" #'consult-mu-embark-reply
+  "f" #'consult-mu-embark-forward
+  "?" #'consult-mu-embark-kill-message-field
+  "c" #'consult-mu-embark-search-messages-from-contact
+  "s" #'consult-mu-embark-search-messages-with-subject
+  "S" #'consult-mu-embark-save-attachmnts
+  )
+
+(add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
+
 
 ;; add mark keys to `consult-mu-embark-messages-actions-map' keymap
 (defun consult-mu-embark--add-keys-for-marks (marks)
@@ -1925,7 +2062,7 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 
 ;; change the default action on `consult-mu-messages' category.
 (add-to-list 'embark-default-action-overrides '(consult-mu-messages . consult-mu-embark-default-action))
-(add-to-list 'embark-default-action-overrides '(consult-mu-contacts . consult-mu-contacts-embark-default-action))
+
 
 ;;; Provide `consult-mu-embark' module
 
@@ -1998,71 +2135,10 @@ This is similar `consult-mu-preview-key' but explicitly for consult-mu-compose."
 #+end_src
 
 ** Backend Functions
-*** pulses
-**** pulse-regexp
-#+begin_src emacs-lisp
-(defun consult-mu--pulse-regexp (regexp)
-  "Finds and pulses REGEXP"
-  (goto-char (point-min))
-  (while (re-search-forward regexp nil t)
-    (when-let* ((m (match-data))
-           (beg (car m))
-           (end (cadr m))
-           (ov (make-overlay beg end))
-           (pulse-delay 0.075)
-           )
-      (pulse-momentary-highlight-overlay ov 'highlight))
-    ))
-#+end_src
-
-#+RESULTS:
-: consult-mu--pulse-regexp
-
-**** pulse-line
-#+begin_src emacs-lisp
-(defun consult-mu--pulse-line ()
-"Pulse line momentarily"
-(let* ((pulse-delay 0.055)
-      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)) )))
-(pulse-momentary-highlight-overlay ov 'highlight))
-)
-#+end_src
 
 *** utilities
 **** read file name to attach
 #+begin_src emacs-lisp
-;; (defun consult-mu-compose--read-file-attach (&optional initial)
-;;   "Read files in the minibuffer to attach to an email.
-
-;; INITIAL is the initial input in the minibuffer."
-;;   (consult--read (completion-table-in-turn #'completion--embedded-envvar-table
-;;                                            #'completion--file-name-table)
-;;                  :prompt "Attach File: "
-;;                  :require-match t
-;;                  :category 'file
-;;                  :initial (or initial default-directory)
-;;                  :lookup (lambda (sel cands &rest args)
-;;                            (file-truename sel))
-;;                  :state (lambda (action cand)
-;;                           (let ((preview (consult--buffer-preview)))
-;;                             (pcase action
-;;                               ('setup
-;;                                (setq consult-mu-compose-current-draft-buffer (current-buffer))
-;;                                )
-;;                               ('preview
-;;                                (if cand
-;;                                    (when (not (file-directory-p cand))
-;;                                      (funcall preview action
-;;                                               (find-file-noselect (file-truename cand))
-;;                                               ))))
-;;                               ('return
-;;                                cand
-;;                                )
-;;                               )))
-;;                  :preview-key consult-mu-compose-preview-key
-;;                  :history 'consult-mu-compose-attach-history
-;;                  ))
-
 (defun consult-mu-compose--read-file-attach (&optional initial)
   "Read files in the minibuffer to attach to an email.
 
@@ -2089,6 +2165,7 @@ INITIAL is the initial input in the minibuffer."
                                )
                               )))
                  :preview-key consult-mu-compose-preview-key
+                 :add-history (list mu4e-attachment-dir)
                  :history 'consult-mu-compose-attach-history
                  ))
 #+end_src
@@ -2673,6 +2750,10 @@ By default it is bound to `consult-mu-contacts--list-messages-action'."
 "Override grouping in `consult-mu-contacs' based on user input.")
 
 
+(defvar consult-mu-contacts--history nil
+  "History variable for `consult-mu-contacts'.")
+
+
 #+end_src
 
 ** Backend Commands
@@ -2692,11 +2773,35 @@ This is a wrapper function around `consult-mu-contacts--list-messages'. It parse
 
 To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--list-messages-action."
 
+
   (let* ((info (cdr cand))
          (contact (plist-get info :contact))
          )
     (consult-mu-contacts--list-messages contact)
-    ))
+    )
+
+)
+#+end_src
+*** compose email
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--compose-to (contact)
+  (let* ((email (plist-get contact :email)))
+         (mu4e-compose-new email)
+))
+
+(defun consult-mu-contacts--compose-to-action (cand)
+  "Searches the messages from contact candidate, CAND.
+
+This is a wrapper function around `consult-mu-contacts--list-messages'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--list-messages'.
+
+To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--list-messages-action."
+
+  (let* ((info (cdr cand))
+         (contact (plist-get info :contact))
+         )
+    (consult-mu-contacts--compose-to contact)
+    )
+)
 #+end_src
 ** Fontend Interactive Commands
 **** consult-mu-contacts
@@ -2708,11 +2813,36 @@ STRING is the output retrieved from `mu find INPUT ...` in the command line.
 INPUT is the query from the user.
 if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
   (let* ((query input)
-         (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" string))
-         (email (match-string 1 string))
-         (user (match-string 2 string))
-         (domain (match-string 3 string))
-         (extension (match-string 4 string))
+         (email (consult-mu--message-extract-email-from-string string))
+         (name (string-trim (replace-regexp-in-string email "" string nil t nil nil)))
+         (contact (list :name name :email email))
+         (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
+         (str (format "%s\s\s%s"
+                      (propertize (consult-mu--set-string-width email (floor (* (frame-width) 0.55))) 'face 'consult-mu-sender-face)
+                      (propertize name 'face 'consult-mu-subject-face)
+                      ))
+         (str (propertize str :contact contact :query query))
+         )
+    (if (and consult-mu-highlight-matches highlight)
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-mu--highlight-match match-str str t))))
+      str)
+    (cons str (list :contact contact :query query))))
+
+
+(defun consult-mu-contacts--format-candidate (string input highlight)
+  "Formats minibuffer candidates for `consult-mu-contacts'.
+STRING is the output retrieved from `mu find INPUT ...` in the command line.
+INPUT is the query from the user.
+if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
+  (let* ((query input)
+         (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+\\)@\\(?2:[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" string))
+         (email (match-string 0 string))
+         (user (match-string 1 string))
+         (domain (match-string 2 string))
          (name (string-trim (replace-regexp-in-string email "" string nil t nil nil)))
          (contact (list :name name :email email))
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
@@ -2731,8 +2861,18 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
       str)
     (cons str (list :contact contact :query query))))
 #+end_src
-
-
+***** add history
+#+begin_src emacs-lisp
+(defun consult-mu-contacts--add-history ()
+  (let ((add (list)))
+    (pcase major-mode
+      ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
+       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item))) (append add (string-split (consult-mu--message-get-header-field "from") ",\\|;") (string-split (consult-mu--message-get-header-field "to") ",\\|;")
+       )
+      ))
+      (_
+       (list)))))
+#+end_src
 ***** group
 #+begin_src emacs-lisp
 (defun consult-mu-contacts--group-name (cand)
@@ -2767,6 +2907,21 @@ This is passed as GROUP to `consult--read' on candidates and is used to group co
 #+RESULTS:
 : consult-mu-contacts--group
 
+***** lookup
+#+begin_src emacs-lisp
+(defun consult-mu-contacs--lookup ()
+"Lookup function for `consult-mu-contacs' minibuffer candidates.
+
+This is passed as LOOKUP to `consult--read' on candidates and is used to format the output when a candidate is selected."
+  (lambda (sel cands &rest args)
+    (let* ((info (cdr (assoc sel cands)))
+           (contact  (plist-get info :contact))
+           (name (plist-get contact :name))
+           (email (plist-get contact :email))
+           )
+      (cons (or name email) info)
+      )))
+#+end_src
 ***** state/preview
 #+begin_src emacs-lisp
 (defun consult-mu-contacts--state ()
@@ -2895,14 +3050,12 @@ will retrieve the message as the example above, then narrows down the completion
      (consult-mu-contacts--transform builder)
      )
    :prompt prompt
-   ;;:lookup (consult-mu--lookup)
+   :lookup (consult-mu-contacs--lookup)
    :state (funcall #'consult-mu-contacts--state)
    :initial (consult--async-split-initial initial)
    :group #'consult-mu-contacts--group
-   ;;:add-history (append (list (consult--async-split-thingatpt 'symbol))
-   ;;                     consult-mu-saved-searches-dynamic
-   ;;                     )
-   ;;:history '(:input consult-mu--history)
+   :add-history (consult-mu-contacts--add-history)
+   :history '(:input consult-mu-contacts--history)
    ;;:require-match t
    :category 'consult-mu-contacts
    :preview-key consult-mu-preview-key
@@ -3005,12 +3158,13 @@ This section includes additional useful embark actions as well as possible keyma
 
 
 (defun consult-mu-contacts-embark-compose (cand)
-    (let* ((contact (get-text-property 0 :contact cand)))
-      (unless (mu4e-running-p) (mu4e--server-start))
-      ;;(mu4e-compose-new)
-      ;;(insert contact)
-      ))
+  (let* ((contact (get-text-property 0 :contact cand)))
+     (consult-mu-contacts--compose-to contact)))
 
+(defun consult-mu-contacts-embark-search-messages (cand)
+  (let* ((contact (get-text-property 0 :contact cand))
+         (email (plist-get contact :email)))
+     (consult-mu (concat "from:" email))))
 
 (defun consult-mu-contacts-embark-default-action (cand)
   "Run `consult-mu-contacts-action' on the candidate."
@@ -3020,13 +3174,13 @@ This section includes additional useful embark actions as well as possible keyma
     (funcall consult-mu-contacts-action newcand))
   )
 
-
 ;;; Define Embark Keymaps
 
 (defvar-keymap consult-mu-embark-contacts-actions-map
   :doc "Keymap for consult-mu-embark-contacts"
   :parent consult-mu-embark-general-actions-map
   "c" #'consult-mu-contacts-embark-compose
+  "s" #'consult-mu-contacts-embark-search-messages
   )
 
 (add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))

@@ -45,6 +45,10 @@ By default it is bound to `consult-mu-contacts--list-messages-action'."
 (defvar consult-mu-contacts--override-group nil
 "Override grouping in `consult-mu-contacs' based on user input.")
 
+
+(defvar consult-mu-contacts--history nil
+  "History variable for `consult-mu-contacts'.")
+
 (defun consult-mu-contacts--list-messages (contact)
   (let* ((consult-mu-maxnum nil)
         (email (plist-get contact :email))
@@ -59,11 +63,33 @@ This is a wrapper function around `consult-mu-contacts--list-messages'. It parse
 
 To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--list-messages-action."
 
+
   (let* ((info (cdr cand))
          (contact (plist-get info :contact))
          )
     (consult-mu-contacts--list-messages contact)
-    ))
+    )
+
+)
+
+(defun consult-mu-contacts--compose-to (contact)
+  (let* ((email (plist-get contact :email)))
+         (mu4e-compose-new email)
+))
+
+(defun consult-mu-contacts--compose-to-action (cand)
+  "Searches the messages from contact candidate, CAND.
+
+This is a wrapper function around `consult-mu-contacts--list-messages'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--list-messages'.
+
+To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--list-messages-action."
+
+  (let* ((info (cdr cand))
+         (contact (plist-get info :contact))
+         )
+    (consult-mu-contacts--compose-to contact)
+    )
+)
 
 (defun consult-mu-contacts--format-candidate (string input highlight)
   "Formats minibuffer candidates for `consult-mu-contacts'.
@@ -71,11 +97,7 @@ STRING is the output retrieved from `mu find INPUT ...` in the command line.
 INPUT is the query from the user.
 if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
   (let* ((query input)
-         (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" string))
-         (email (match-string 1 string))
-         (user (match-string 2 string))
-         (domain (match-string 3 string))
-         (extension (match-string 4 string))
+         (email (consult-mu--message-extract-email-from-string string))
          (name (string-trim (replace-regexp-in-string email "" string nil t nil nil)))
          (contact (list :name name :email email))
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
@@ -93,6 +115,45 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
           (setq str (consult-mu--highlight-match match-str str t))))
       str)
     (cons str (list :contact contact :query query))))
+
+
+(defun consult-mu-contacts--format-candidate (string input highlight)
+  "Formats minibuffer candidates for `consult-mu-contacts'.
+STRING is the output retrieved from `mu find INPUT ...` in the command line.
+INPUT is the query from the user.
+if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
+  (let* ((query input)
+         (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+\\)@\\(?2:[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" string))
+         (email (match-string 0 string))
+         (user (match-string 1 string))
+         (domain (match-string 2 string))
+         (name (string-trim (replace-regexp-in-string email "" string nil t nil nil)))
+         (contact (list :name name :email email))
+         (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
+         (str (format "%s\s\s%s"
+                      (propertize (consult-mu--set-string-width email (floor (* (frame-width) 0.55))) 'face 'consult-mu-sender-face)
+                      (propertize name 'face 'consult-mu-subject-face)
+                      ))
+         (str (propertize str :contact contact :query query))
+         )
+    (if (and consult-mu-highlight-matches highlight)
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-mu--highlight-match match-str str t))))
+      str)
+    (cons str (list :contact contact :query query))))
+
+(defun consult-mu-contacts--add-history ()
+  (let ((add (list)))
+    (pcase major-mode
+      ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
+       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item))) (append add (string-split (consult-mu--message-get-header-field "from") ",\\|;") (string-split (consult-mu--message-get-header-field "to") ",\\|;")
+       )
+      ))
+      (_
+       (list)))))
 
 (defun consult-mu-contacts--group-name (cand)
   "Gets the group name of CAND using `consult-mu-contacts-group-by'
@@ -121,6 +182,19 @@ This is passed as GROUP to `consult--read' on candidates and is used to group co
   (when-let ((name (consult-mu-contacts--group-name cand)))
     (if transform (substring cand) name)
     ))
+
+(defun consult-mu-contacs--lookup ()
+"Lookup function for `consult-mu-contacs' minibuffer candidates.
+
+This is passed as LOOKUP to `consult--read' on candidates and is used to format the output when a candidate is selected."
+  (lambda (sel cands &rest args)
+    (let* ((info (cdr (assoc sel cands)))
+           (contact  (plist-get info :contact))
+           (name (plist-get contact :name))
+           (email (plist-get contact :email))
+           )
+      (cons (or name email) info)
+      )))
 
 (defun consult-mu-contacts--state ()
   "State function for `consult-mu-contacts' candidates.
@@ -230,14 +304,12 @@ will retrieve the message as the example above, then narrows down the completion
      (consult-mu-contacts--transform builder)
      )
    :prompt prompt
-   ;;:lookup (consult-mu--lookup)
+   :lookup (consult-mu-contacs--lookup)
    :state (funcall #'consult-mu-contacts--state)
    :initial (consult--async-split-initial initial)
    :group #'consult-mu-contacts--group
-   ;;:add-history (append (list (consult--async-split-thingatpt 'symbol))
-   ;;                     consult-mu-saved-searches-dynamic
-   ;;                     )
-   ;;:history '(:input consult-mu--history)
+   :add-history (consult-mu-contacts--add-history)
+   :history '(:input consult-mu-contacts--history)
    ;;:require-match t
    :category 'consult-mu-contacts
    :preview-key consult-mu-preview-key

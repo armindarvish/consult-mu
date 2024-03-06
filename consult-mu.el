@@ -50,7 +50,7 @@ This is normally passed to \"--maxnum\" in the command line or is defined by `mu
 
 (defcustom consult-mu-search-sort-field mu4e-search-sort-field
   "What field to sort results by?
-By defualt inherits from `mu4e-search-sort-files'."
+By defualt inherits from `mu4e-search-sort-field'."
   :group 'consult-mu
   :type '(radio (const :date)
                 (const :subject)
@@ -58,7 +58,8 @@ By defualt inherits from `mu4e-search-sort-files'."
                 (const :prio)
                 (const :from)
                 (const :to)
-                (const :list)))
+                (const :list)
+                )
 
 (defcustom consult-mu-headers-fields mu4e-headers-fields
   "A list of header fields to show in the headers buffer.
@@ -331,6 +332,34 @@ By default inherits from `font-lock-function-call-face'.")
   "url face in `consult-mu''s minibuffer annotations;
 By default inherits from `link'.")
 
+(defun consult-mu--pulse-regexp (regexp)
+  "Finds and pulses REGEXP"
+  (goto-char (point-min))
+  (while (re-search-forward regexp nil t)
+    (when-let* ((m (match-data))
+           (beg (car m))
+           (end (cadr m))
+           (ov (make-overlay beg end))
+           (pulse-delay 0.075)
+           )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    ))
+
+(defun consult-mu--pulse-region (beg end)
+  "Finds and pulses region from BEG to END"
+  (let ((ov (make-overlay beg end))
+        (pulse-delay 0.075)
+        )
+      (pulse-momentary-highlight-overlay ov 'highlight))
+    )
+
+(defun consult-mu--pulse-line ()
+"Pulse line momentarily"
+(let* ((pulse-delay 0.055)
+      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
+(pulse-momentary-highlight-overlay ov 'highlight))
+)
+
 (defun consult-mu--set-string-width (string width &optional prepend)
   "Sets the STRING width to a fixed value, WIDTH.
 If the STRING is longer than WIDTH, it truncates the string and adds ellipsis, \"...\". If the string is shorter it adds whitespace to the string.
@@ -448,6 +477,28 @@ Returns a exapnded list of strings containing the description of each flag chara
              ("c" 'calendar)
              (_ nil))))
 
+(defun consult-mu--message-extract-email-from-string (string)
+  (string-match "[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+" string)
+  (match-string 0 string))
+
+(defun consult-mu--message-emails-string-to-list (string)
+  (mapcar #'consult-mu--message-extract-email-from-string
+          (split-string string ",\\|;\\|\t"))
+  )
+
+(defun consult-mu--message-get-header-field (&optional field)
+  (when (or (derived-mode-p 'message-mode)
+            (derived-mode-p 'mu4e-view-mode)
+            (derived-mode-p 'org-msg-edit-mode)
+            (derived-mode-p'mu4e-compose-mode))
+    (let ((field (or field
+                     (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
+                      :prompt "Header Field: ")))))
+      (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
+      (goto-char (point-min))
+      (re-search-forward  (concat "^" field ": "))
+      (buffer-substring-no-properties (point) (point-at-eol)))))
+
 (defun consult-mu--headers-append-handler (msglst)
   "Overrides `mu4e~headers-append-handler' for `consult-mu'.
 This is to ensure that buffer handling is done right for consult-mu.
@@ -552,6 +603,8 @@ chronologically (:date) by the newest message in the thread.
        :to)
       ((or "list" "v")
        :list)
+      ;; ((or "tags" "x")
+      ;;  :tags)
       (_
        consult-mu-search-sort-field)
       )))
@@ -768,12 +821,8 @@ will be converted to
 (let* ((string (replace-regexp-in-string ">,\s\\|>;\s" ">\n" string))
          (list (string-split string "\n" t)))
     (mapcar (lambda (item)
-              (cond
-               ((string-match "\\(?2:.*\\)\s+<\\(?1:.+\\)>" item)
-                (list :email (or (match-string 1 item) nil) :name (or (match-string 2 item) nil)))
-               ((string-match "^\\(?1:.+@.+\..+$\\)" item)
-                 (list :email (or (match-string 1 item) nil) :name nil))
-               )) list)))
+              (let ((email (consult-mu--message-extract-email-from-string item)))
+                 (list :email email :name (string-trim (replace-regexp-in-string (concat email "\\|>" "\\|<") "" string nil t nil nil))))) list)))
 
 (defun consult-mu--contact-name-or-email (contact)
 "Retrieve name or email of CONTACT.
