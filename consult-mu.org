@@ -1827,6 +1827,36 @@ This section includes additional useful embark actions as well as possible keyma
         )
       ))
 
+(defun consult-mu-embark-wide-reply (cand)
+  "Reply to message in CAND."
+    (let* ((msg (get-text-property 0 :msg cand))
+           (query (get-text-property 0 :query cand))
+           (type (get-text-property 0 :type cand))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
+           (compose-buff nil))
+      (if (equal type :async)
+          (consult-mu--update-headers query t msg :async)
+        )
+      ;;(funcall consult-mu-action newcand)
+      (with-current-buffer consult-mu-headers-buffer-name
+        (unless (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+          (mu4e-headers-goto-message-id))
+        (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+            (progn
+              (setq compose-buff (mu4e-compose-wide-reply))
+              (mu4e~headers-update-handler msg nil nil)
+              )
+        ))
+
+      (with-current-buffer consult-mu-view-buffer-name
+        (quit-window)
+        )
+      (if (and compose-buff (buffer-live-p compose-buff))
+          (progn (switch-to-buffer compose-buff)
+                 (select-window (get-buffer-window compose-buff)))
+        )
+      ))
+
 (defun consult-mu-embark-forward (cand)
   "Reply to message in CAND."
   (save-mark-and-excursion
@@ -1910,6 +1940,27 @@ This section includes additional useful embark actions as well as possible keyma
         )
       ))
 
+(defun consult-mu-embark-thread-root (cand)
+  "Go to root of thread for CAND."
+    (let* ((msg (get-text-property 0 :msg cand))
+           (query (get-text-property 0 :query cand))
+           (type (get-text-property 0 :type cand))
+           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
+           )
+      (if (equal type :async)
+          (consult-mu--update-headers query t msg :async)
+        )
+      (with-current-buffer consult-mu-headers-buffer-name
+        (unless (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+          (mu4e-headers-goto-message-id)
+        (if (equal (mu4e-message-field-at-point :message-id) (plist-get msg :message-id))
+            (progn
+              (mu4e-thread-goto-root)
+              (mu4e~headers-update-handler msg nil nil)
+              )
+        ))
+      )))
+
 (defun consult-mu-embark-search-messages-from-contact (cand)
   "Searh messages from the same contact as the message in CAND."
     (let* ((msg (get-text-property 0 :msg cand))
@@ -1922,8 +1973,9 @@ This section includes additional useful embark actions as well as possible keyma
 (defun consult-mu-embark-search-messages-with-subject (cand)
   "Searh messages from the same contact as the message in CAND."
     (let* ((msg (get-text-property 0 :msg cand))
-           (subject (plist-get msg :subject))
-           )
+           ;;(subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+" "" (plist-get msg :subject)))
+           (subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+\\|\\(\\[.*\\]\\)" "" (format "%s" (plist-get msg :subject))))
+          )
       (consult-mu (concat "subject:" subject)))
       )
 
@@ -2034,11 +2086,13 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
   :doc "Keymap for consult-mu-embark-messages"
   :parent consult-mu-embark-general-actions-map
   "r" #'consult-mu-embark-reply
+  "w" #'consult-mu-embark-wide-reply
   "f" #'consult-mu-embark-forward
   "?" #'consult-mu-embark-kill-message-field
   "c" #'consult-mu-embark-search-messages-from-contact
   "s" #'consult-mu-embark-search-messages-with-subject
   "S" #'consult-mu-embark-save-attachmnts
+  "t" #'consult-mu-embark-thread-root
   )
 
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
