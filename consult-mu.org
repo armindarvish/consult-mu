@@ -1650,7 +1650,7 @@ will retrieve the message as the example above, then narrows down the completion
    :initial (consult--async-split-initial initial)
    :group #'consult-mu--group
    :add-history (append (list (consult--async-split-thingatpt 'symbol))
-                        consult-mu-saved-searches-dynamic
+                        consult-mu-saved-searches-async
                         )
    :history '(:input consult-mu--history)
    :require-match t
