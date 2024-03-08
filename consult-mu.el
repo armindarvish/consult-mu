@@ -870,6 +870,12 @@ Looks at the contact plist (e.g. (:name \"John Doe\" :email \"john.doe@example.c
    (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email) "")) contact ","))
    ))
 
+(defun consult-mu--headers-template ()
+  "Make headers template using `consult-mu-headers-template'."
+(if (and consult-mu-headers-template (functionp consult-mu-headers-template))
+    (funcall consult-mu-headers-template)
+  consult-mu-headers-template))
+
 (defun consult-mu--expand-headers-template (msg string)
   "Expands STRING to create a custom header format for MSG.
 
@@ -1146,10 +1152,9 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
          (msg (plist-get info :msg))
          (query (plist-get info :query))
          (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
-         (consult-mu-headers-template (if (functionp consult-mu-headers-template) (funcall consult-mu-headers-template)
-                                        consult-mu-headers-template))
-         (str (if consult-mu-headers-template
-                 (consult-mu--expand-headers-template msg consult-mu-headers-template)
+         (headers-template (consult-mu--headers-template))
+         (str (if headers-template
+                 (consult-mu--expand-headers-template msg headers-template)
                   string)
          )
          (str (propertize str :msg msg :query query :type :dynamic))
@@ -1343,10 +1348,9 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (path (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))))))
          (msg (list :subject subject :date date :from sender :to receiver :size size :message-id msgid :flags flags :tags tags :priority priority :cc cc :bcc bcc :path path))
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
-         (consult-mu-headers-template (if (functionp consult-mu-headers-template) (funcall consult-mu-headers-template)
-                                        consult-mu-headers-template))
-         (str (if consult-mu-headers-template
-                 (consult-mu--expand-headers-template msg consult-mu-headers-template)
+         (headers-template (consult-mu--headers-template))
+         (str (if headers-template
+                 (consult-mu--expand-headers-template msg headers-template)
                   (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
                           (propertize (consult-mu--set-string-width
                                        (format-time-string "%x" date) 10) 'face 'consult-mu-date-face)
