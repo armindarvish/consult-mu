@@ -132,7 +132,8 @@ Thu 09 Nov 23  Title of the Email Limited to 50 Characters Onl...  example@domai
 
 "
   :group 'consult-mu
-  :type 'string)
+  :type '(choice (const :tag "Fromatted String" :format "%{%%d13%%s50%%f17%}")
+           (function :tag "Custom Function")))
 
 (defcustom consult-mu-search-sort-direction mu4e-search-sort-direction
   "Direction to sort by a symbol.
@@ -936,8 +937,14 @@ will be converted to
 (let* ((string (replace-regexp-in-string ">,\s\\|>;\s" ">\n" string))
          (list (string-split string "\n" t)))
     (mapcar (lambda (item)
-              (let ((email (consult-mu--message-extract-email-from-string item)))
-                 (list :email email :name (string-trim (replace-regexp-in-string (concat email "\\|>" "\\|<") "" string nil t nil nil))))) list)))
+              (cond
+               ((string-match "\\(?2:.*\\)\s+<\\(?1:.+\\)>" item)
+                (list :email (or (match-string 1 item) nil) :name (or (match-string 2 item) nil)))
+               ((string-match "^\\(?1:[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" item)
+                 (list :email (or (match-string 1 item) nil) :name nil))
+               (t
+                (list :email (format "%s" item) :name nil))
+               )) list)))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -960,6 +967,7 @@ Looks at the contact plist (e.g. (:name \"John Doe\" :email \"john.doe@example.c
 
 See `consult-mu-headers-template' for explanation of the format of STRING.
 "
+
   (cl-loop with str = nil
            for c in (string-split string "%" t)
            concat (concat (pcase  (substring c 0 1)
@@ -1263,6 +1271,8 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
          (msg (plist-get info :msg))
          (query (plist-get info :query))
          (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
+         (consult-mu-headers-template (if (functionp consult-mu-headers-template) (funcall consult-mu-headers-template)
+                                        consult-mu-headers-template))
          (str (if consult-mu-headers-template
                  (consult-mu--expand-headers-template msg consult-mu-headers-template)
                   string)
@@ -1475,6 +1485,8 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (path (cadr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr (cdr parts))))))))))))
          (msg (list :subject subject :date date :from sender :to receiver :size size :message-id msgid :flags flags :tags tags :priority priority :cc cc :bcc bcc :path path))
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
+         (consult-mu-headers-template (if (functionp consult-mu-headers-template) (funcall consult-mu-headers-template)
+                                        consult-mu-headers-template))
          (str (if consult-mu-headers-template
                  (consult-mu--expand-headers-template msg consult-mu-headers-template)
                   (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
@@ -1591,9 +1603,15 @@ BUILDER is the command line builder function (e.g. `consult-mu--async-builder').
     (if threads (setq opts (append opts (list "--thread"))))
     (if skip-dups (setq opts (append opts (list "--skip-dups"))))
     (if include-related (setq opts (append opts (list "--include-related"))))
-    (unless (or (member "-n" flags) (member "--maxnum" flags))
+    (cond
+     ((and (member "-n" flags) (< (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)) 0))
+       (setq opts (remove "-n" (remove (nth (+ (cl-position "-n" opts :test 'equal) 1) opts) opts))))
+     ((and (member "--maxnum" flags) (< (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)) 0))
+       (setq opts (remove "--maxnum" (remove (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts) opts)))))
+    (unless (or (member "-n" flags)  (member "--maxnum" flags))
       (if (and consult-mu-maxnum (> consult-mu-maxnum 0))
           (setq opts (append opts (list "--maxnum" (format "%s" consult-mu-maxnum))))))
+
     (pcase consult-mu-search-sort-direction
       ('descending
        (if (or (member "-z" flags) (member "--reverse" flags))
