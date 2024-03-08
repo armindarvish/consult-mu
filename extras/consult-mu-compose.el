@@ -52,7 +52,7 @@ It is recommended to set this to something other than 'any to avoid loading prev
                  (key :tag "Key")
                  (repeat :tag "List of keys" key)))
 
-(defcustom consult-mu-embark-attach-file-key nil
+(defcustom consult-mu-embark-attach-file-key (kbd "a")
   "Embark key binding for interactive file attachement."
   :type '(choice (key :tag "Key")))
 
