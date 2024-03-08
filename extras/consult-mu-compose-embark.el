@@ -23,12 +23,21 @@
   "Run `consult-mu-attach-files' on the candidate."
     (funcall (apply-partially #'consult-mu-compose-attach cand)))
 
-;;; add attach to file keymap
-(define-key embark-file-map (kbd consult-mu-embark-attach-file-key) #'consult-mu-compose-embark-attach-file)
+;;; add attach key to embark-file-map
+(defun consult-mu-compose-embark-bind-attach-file-key (&toptional key)
+  "Binds KEY to `consult-mu-embark-attach-file-key' in `embark-file-map'.
+If KEY is non-nil, uses KEY instead of `consult-mu-embark-attach-file-key'.
+"
+  (if-let ((key (or key (kbd consult-mu-embark-attach-file-key))))
+      (define-key embark-file-map key #'consult-mu-compose-embark-attach-file)))
+
+(consult-mu-compose-embark-bind-attach-file-key)
 
 ;; change the default action on `consult-mu-contacts category.
 (add-to-list 'embark-default-action-overrides '((file . consult-mu-compose--read-file-attach)  . consult-mu-compose-attach))
 (add-to-list 'embark-default-action-overrides '((file . consult-mu-compose-attach)  . consult-mu-compose-attach))
+
+
 
 ;;; Provide `consult-mu-compose-embark' module
 
