@@ -52,9 +52,9 @@ It is recommended to set this to something other than 'any to avoid loading prev
                  (key :tag "Key")
                  (repeat :tag "List of keys" key)))
 
-(defcustom consult-mu-embark-attach-file-key "a"
+(defcustom consult-mu-embark-attach-file-key (kbd "a")
   "Embark key binding for interactive file attachement."
-  :type '(choice (string :tag "Key")))
+  :type '(choice (key :tag "Key")))
 
 (defvar consult-mu-compose-attach-history nil
   "History variable for file attachment used in `consult-mu-compose--read-file-attach'.")
