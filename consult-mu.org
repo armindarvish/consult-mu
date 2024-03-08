@@ -2700,9 +2700,6 @@ This is passed as GROUP to `consult--read' on candidates and is used to group co
     ))
 #+end_src
 
-#+RESULTS:
-: consult-mu-contacts--group
-
 ***** lookup
 #+begin_src emacs-lisp
 (defun consult-mu-contacs--lookup ()
@@ -2737,9 +2734,6 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
         ))))
 
 #+end_src
-
-#+RESULTS:
-: consult-mu-contacts--state
 
 
 ***** transform
