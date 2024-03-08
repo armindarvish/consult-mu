@@ -43,6 +43,7 @@ Files larger than this value in size will require user confirmation before previ
 
 This is similar to `consult-mu-preview-key' but explicitly for consult-mu-compose.
 It is recommended to set this to something other than 'any to avoid loading preview buffers for each file."
+  :group 'consult-mu
   :type '(choice (const :tag "Any key" any)
                  (list :tag "Debounced"
                        (const :debounce)
@@ -54,7 +55,9 @@ It is recommended to set this to something other than 'any to avoid loading prev
 
 (defcustom consult-mu-embark-attach-file-key nil
   "Embark key binding for interactive file attachement."
-  :type '(choice (key :tag "Key")))
+  :group 'consult-mu
+  :type '(choice (key :tag "Key")
+                 (const :tag "no key binding" nil)))
 
 (defvar consult-mu-compose-attach-history nil
   "History variable for file attachment used in `consult-mu-compose--read-file-attach'.")
