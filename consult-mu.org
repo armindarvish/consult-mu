@@ -2084,7 +2084,7 @@ It is recommended to set this to something other than 'any to avoid loading prev
 
 (defcustom consult-mu-embark-attach-file-key "a"
   "Embark key binding for interactive file attachement."
-  :type '(choice (key :tag "Key")))
+  :type '(choice (string :tag "Key")))
 #+end_src
 *** Others
 #+begin_src emacs-lisp
