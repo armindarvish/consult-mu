@@ -23,19 +23,8 @@
   "Run `consult-mu-attach-files' on the candidate."
     (funcall (apply-partially #'consult-mu-compose-attach cand)))
 
-
 ;;; add attach to file keymap
-
-(define-key embark-file-map "a" #'consult-mu-compose-embark-attach-file)
-
-;; (defvar-keymap consult-mu-embark-compose-actions-map
-;;   :doc "Keymap for consult-mu-embark-contacts"
-;;   :parent consult-mu-embark-general-actions-map
-;;   "a" #'consult-mu-compose-embark-attach-file
-;;   )
-
-;; (add-to-list 'embark-keymap-alist '(consult-mu-compose . consult-mu-embark-compose-actions-map))
-
+(define-key embark-file-map (kbd consult-mu-embark-attach-file-key) #'consult-mu-compose-embark-attach-file)
 
 ;; change the default action on `consult-mu-contacts category.
 (add-to-list 'embark-default-action-overrides '((file . consult-mu-compose--read-file-attach)  . consult-mu-compose-attach))

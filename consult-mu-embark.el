@@ -39,138 +39,39 @@
   )
 
 
-;; (defun consult-mu-embark-reply (cand)
-;;   "Reply to message in CAND."
-;;   (let* ((msg (get-text-property 0 :msg cand))
-;;          (msgid (plist-get msg  :message-id))
-;;          (query (get-text-property 0 :query cand))
-;;          (buf (get-buffer consult-mu-headers-buffer-name))
-;;          )
-;;     (if buf
-;;         (progn
-;;           (with-current-buffer buf
-;;             (if (eq major-mode 'mu4e-headers-mode)
-;;                 (progn
-;;                   (goto-char (point-min))
-;;                   (mu4e-headers-goto-message-id msgid)
-;;                   (if (equal (mu4e-message-field-at-point :message-id) msgid)
-;;                       (mu4e-compose-reply)
-;;                     (progn
-;;                       (let* ((opts (cdr (consult--command-split query)))
-;;                              (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-;;                         (consult-mu--update-headers query t msgid))
-;;                       (with-current-buffer buf
-;;                         (goto-char (point-min))
-;;                         (mu4e-headers-goto-message-id msgid)
-;;                         (if (equal (mu4e-message-field-at-point :message-id) msgid)
-;;                             (mu4e-compose-reply))))))
-;;               (progn
-;;                 (let* ((opts (cdr (consult--command-split query)))
-;;                        (query (string-join (append (list (concat "msgid:" msgid) "--") opts) " ")))
-;;                   (consult-mu--update-headers query t msgid))
-;;                 (with-current-buffer buf
-;;                   (goto-char (point-min))
-;;                   (mu4e-headers-goto-message-id msgid)
-;;                   (if (equal (mu4e-message-field-at-point :message-id) msgid)
-;;                       (mu4e-compose-reply)))))
-;;             )
-;;           )
-;;       (mu4e-update-index-nonlazy)
-;;       )))
 
 (defun consult-mu-embark-reply (cand)
   "Reply to message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
-         (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
-         (msg-id (plist-get msg :message-id))
-         (compose-buff nil))
+         )
     (if (equal type :async)
         (consult-mu--update-headers query t msg :async)
       )
-    ;;(funcall consult-mu-action newcand)
-    (with-current-buffer consult-mu-headers-buffer-name
-      (unless (equal (mu4e-message-field-at-point :message-id) msg-id)
-        (mu4e-headers-goto-message-id msg-id))
-      (if (equal (mu4e-message-field-at-point :message-id) msg-id)
-          (progn
-            (setq compose-buff (mu4e-compose-reply))
-            (mu4e~headers-update-handler msg nil nil)
-            )
-        ))
-
-    (with-current-buffer consult-mu-view-buffer-name
-      (quit-window)
-      )
-    (if (and compose-buff (buffer-live-p compose-buff))
-        (progn (switch-to-buffer compose-buff)
-               (select-window (get-buffer-window compose-buff)))
-      )
-    ))
+    (consult-mu--reply msg nil)))
 
 (defun consult-mu-embark-wide-reply (cand)
-  "Reply to message in CAND."
+  "Reply all for message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
-         (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
-         (msg-id (plist-get msg :message-id))
-         (compose-buff nil))
+         )
     (if (equal type :async)
         (consult-mu--update-headers query t msg :async)
       )
-    ;;(funcall consult-mu-action newcand)
-    (with-current-buffer consult-mu-headers-buffer-name
-      (unless (equal (mu4e-message-field-at-point :message-id) msg-id)
-        (mu4e-headers-goto-message-id msg-id))
-      (if (equal (mu4e-message-field-at-point :message-id) msg-id)
-          (progn
-            (setq compose-buff (mu4e-compose-wide-reply))
-            (mu4e~headers-update-handler msg nil nil)
-            )
-        ))
-
-    (with-current-buffer consult-mu-view-buffer-name
-      (quit-window)
-      )
-    (if (and compose-buff (buffer-live-p compose-buff))
-        (progn (switch-to-buffer compose-buff)
-               (select-window (get-buffer-window compose-buff)))
-      )
-    ))
+    (consult-mu--reply msg )))
 
 (defun consult-mu-embark-forward (cand)
-  "Reply to message in CAND."
-  (save-mark-and-excursion
-    (let* ((msg (get-text-property 0 :msg cand))
-           (query (get-text-property 0 :query cand))
-           (type (get-text-property 0 :type cand))
-           (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
-           (msg-id (plist-get msg :message-id))
-           (compose-buff nil))
-      (if (equal type :async)
-          (consult-mu--update-headers query t msg :async)
-        )
-      ;;(funcall consult-mu-action newcand)
-      (with-current-buffer consult-mu-headers-buffer-name
-        (unless (equal (mu4e-message-field-at-point :message-id) msg-id)
-          (mu4e-headers-goto-message-id msg-id))
-        (if (equal (mu4e-message-field-at-point :message-id) msg-id)
-            (progn
-              (setq compose-buff (mu4e-compose-forward))
-              (mu4e~headers-update-handler msg nil nil)
-              )
-          ))
-
-      (with-current-buffer consult-mu-view-buffer-name
-        (quit-window)
-        )
-      (if (and compose-buff (buffer-live-p compose-buff))
-          (progn (switch-to-buffer compose-buff)
-                 (select-window (get-buffer-window compose-buff)))
-        )
-      )))
+  "Forward the message in CAND."
+  (let* ((msg (get-text-property 0 :msg cand))
+         (query (get-text-property 0 :query cand))
+         (type (get-text-property 0 :type cand))
+         )
+    (if (equal type :async)
+        (consult-mu--update-headers query t msg :async)
+      )
+    (consult-mu--forward msg)))
 
 (defun consult-mu-embark-kill-message-field (cand)
   "Get a header field of message in CAND."
@@ -228,34 +129,8 @@
       )
     ))
 
-;; (defun consult-mu-embark-goto-thread-root (cand)
-;;   "Go to root of thread for CAND."
-;;   (let* ((msg (get-text-property 0 :msg cand))
-;;          (query (get-text-property 0 :query cand))
-;;          (type (get-text-property 0 :type cand))
-;;          (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
-;;          (msg-id (plist-get msg :message-id))
-;;          )
-;;     (if (equal type :async)
-;;         (consult-mu--update-headers query t msg :async)
-;;       )
-;;     (with-current-buffer consult-mu-headers-buffer-name
-;;       (unless (equal (mu4e-message-field-at-point :message-id) msg-id)
-;;         (mu4e-headers-goto-message-id msg-id))
-;;       (if (equal (mu4e-message-field-at-point :message-id) msg-id)
-;;           (progn
-;;             (mu4e~headers-update-handler msg nil nil)
-;;             (mu4e-thread-goto-root)
-;;             ;(consult-mu--view (mu4e-message-at-point) nil consult-mu-mark-viewed-as-read query)
-;;             ;(setq msg (mu4e-message-at-point))
-;;             )
-;;         ))
-;;     (switch-to-buffer consult-mu-headers-buffer-name)
-;;     (minibuffer-quit-recursive-edit)
-;;     ))
-
 (defun consult-mu-embark-search-messages-from-contact (cand)
-  "Searh messages from the same contact as the message in CAND."
+  "Search messages from the same sender as the message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (from (car (plist-get msg :from)))
          (email (plist-get from :email))
@@ -264,7 +139,7 @@
   )
 
 (defun consult-mu-embark-search-messages-with-subject (cand)
-  "Searh messages from the same contact as the message in CAND."
+  "Search all messages for the same subject as the message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          ;;(subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+" "" (plist-get msg :subject)))
          (subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+\\|\\(\\[.*\\]\\)" "" (format "%s" (plist-get msg :subject))))
@@ -313,7 +188,6 @@
 
                 )))))
 
-
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
   "Runs the macro `consult-mu-embark--defun-mark-for' on a list of marks.
@@ -343,7 +217,6 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
   "c" #'consult-mu-embark-search-messages-from-contact
   "s" #'consult-mu-embark-search-messages-with-subject
   "S" #'consult-mu-embark-save-attachmnts
-  ;;"t" #'consult-mu-embark-goto-thread-root
   )
 
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
@@ -351,6 +224,11 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 
 ;; add mark keys to `consult-mu-embark-messages-actions-map' keymap
 (defun consult-mu-embark--add-keys-for-marks (marks)
+  "Adds a key for each mark in MARKS to `consult-mu-embark-messages-actions-map'.
+
+Binds the combination “m key”, where key is the :char in mark plist in the `consult-mu-embark-messages-actions-map' to the function defined by the prefix “consult-mu-embark-mark-for-” and mark.
+
+This is useful for adding all `mu4e-marks' to embark key bindings under a submenu (called by “m”) ,for example the default mark-for-archive mark that is bound to r in mu4e buffers can be called in embark by “m r”."
   (mapcar (lambda (mark)
             (let* ((key (plist-get (cdr mark) :char))
                    (key (cond ((consp key) (car key)) ((stringp key) key)))
@@ -360,6 +238,7 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
               ))
           marks))
 
+;; add all `mu4e-marks to embark keybindings. See `consult-mu-embark--add-keys-for-marks' above for more details
 (consult-mu-embark--add-keys-for-marks mu4e-marks)
 
 ;; change the default action on `consult-mu-messages' category.

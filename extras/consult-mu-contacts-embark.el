@@ -21,10 +21,12 @@
 
 
 (defun consult-mu-contacts-embark-compose (cand)
+  "Embark function for `consult-mu-contacts--compose-to'."
   (let* ((contact (get-text-property 0 :contact cand)))
      (consult-mu-contacts--compose-to contact)))
 
 (defun consult-mu-contacts-embark-search-messages (cand)
+  "Embark function for searching messages from CAND using `consult-mu'."
   (let* ((contact (get-text-property 0 :contact cand))
          (email (plist-get contact :email)))
      (consult-mu (concat "from:" email))))
@@ -38,7 +40,6 @@
   )
 
 ;;; Define Embark Keymaps
-
 (defvar-keymap consult-mu-embark-contacts-actions-map
   :doc "Keymap for consult-mu-embark-contacts"
   :parent consult-mu-embark-general-actions-map
@@ -47,7 +48,6 @@
   )
 
 (add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
-
 
 ;; change the default action on `consult-mu-contacts category.
 (add-to-list 'embark-default-action-overrides '(consult-mu-contacts . consult-mu-contacts-embark-default-action))

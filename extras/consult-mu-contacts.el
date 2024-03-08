@@ -35,25 +35,31 @@ By default it is set to :name. But can be any of:
                 (const :user)))
 
 (defcustom consult-mu-contacts-action #'consult-mu-contacts--list-messages-action
-  "The function that is used when selecting a contact.
-By default it is bound to `consult-mu-contacts--list-messages-action'."
+  "Which function to use when selecting a contact.
+
+By default it is bound to `consult-mu-contacts--list-messages-action'.
+"
   :group 'consult-mu
-  :type 'function)
+  :type '(choice (function :tag "(Default) Show Messages from Contact" #'consult-mu-contacts--list-messages-action)
+                 (function :tag "Custom Function")))
 
 ;;; Other Variables
 
-(defvar consult-mu-contacts--override-group nil
-"Override grouping in `consult-mu-contacs' based on user input.")
+(defvar consult-mu-contacts-category 'consult-mu-contacts
+  "Category symbol for contacts in `consult-mu' package.")
 
+(defvar consult-mu-contacts--override-group nil
+  "Override grouping in `consult-mu-contacs' based on user input.")
 
 (defvar consult-mu-contacts--history nil
   "History variable for `consult-mu-contacts'.")
 
 (defun consult-mu-contacts--list-messages (contact)
+  "List messages from CONTACT using `consult-mu'."
   (let* ((consult-mu-maxnum nil)
         (email (plist-get contact :email))
         )
-      (consult-mu-dynamic (format "contact:%s" email))
+      (consult-mu (format "contact:%s" email))
 ))
 
 (defun consult-mu-contacts--list-messages-action (cand)
@@ -73,16 +79,17 @@ To use this as the default action for consult-mu-contacts, set `consult-mu-conta
 )
 
 (defun consult-mu-contacts--compose-to (contact)
+  "compose an email to CONTACT using `mu4e-compose-new'."
   (let* ((email (plist-get contact :email)))
          (mu4e-compose-new email)
 ))
 
 (defun consult-mu-contacts--compose-to-action (cand)
-  "Searches the messages from contact candidate, CAND.
+  "Open a new buffer to compose a message to contact candidate, CAND.
 
-This is a wrapper function around `consult-mu-contacts--list-messages'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--list-messages'.
+This is a wrapper function around `consult-mu-contacts--compose-to'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--compose-to'.
 
-To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--list-messages-action."
+To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--compose-to-action."
 
   (let* ((info (cdr cand))
          (contact (plist-get info :contact))
@@ -93,7 +100,7 @@ To use this as the default action for consult-mu-contacts, set `consult-mu-conta
 
 (defun consult-mu-contacts--format-candidate (string input highlight)
   "Formats minibuffer candidates for `consult-mu-contacts'.
-STRING is the output retrieved from `mu find INPUT ...` in the command line.
+STRING is the output retrieved from `mu cfind INPUT ...` in the command line.
 INPUT is the query from the user.
 if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
   (let* ((query input)
@@ -116,36 +123,8 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
       str)
     (cons str (list :contact contact :query query))))
 
-
-(defun consult-mu-contacts--format-candidate (string input highlight)
-  "Formats minibuffer candidates for `consult-mu-contacts'.
-STRING is the output retrieved from `mu find INPUT ...` in the command line.
-INPUT is the query from the user.
-if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' in the minibuffer."
-  (let* ((query input)
-         (_ (string-match "\\(?1:[a-zA-Z0-9\_\.\+\-]+\\)@\\(?2:[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" string))
-         (email (match-string 0 string))
-         (user (match-string 1 string))
-         (domain (match-string 2 string))
-         (name (string-trim (replace-regexp-in-string email "" string nil t nil nil)))
-         (contact (list :name name :email email))
-         (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
-         (str (format "%s\s\s%s"
-                      (propertize (consult-mu--set-string-width email (floor (* (frame-width) 0.55))) 'face 'consult-mu-sender-face)
-                      (propertize name 'face 'consult-mu-subject-face)
-                      ))
-         (str (propertize str :contact contact :query query))
-         )
-    (if (and consult-mu-highlight-matches highlight)
-        (cond
-         ((listp match-str)
-          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
-         ((stringp match-str)
-          (setq str (consult-mu--highlight-match match-str str t))))
-      str)
-    (cons str (list :contact contact :query query))))
-
 (defun consult-mu-contacts--add-history ()
+  "Make a list of emails from current buffer to add to `consult-mu-contacts''s history."
   (let ((add (list)))
     (pcase major-mode
       ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
@@ -209,20 +188,6 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
     (let ((preview (consult--buffer-preview)))
       (pcase action
         ('preview
-        ;;  (if cand
-        ;;      (when-let* ((info (cdr cand))
-        ;;                  (contact (plist-get info :contact))
-        ;;                  (query (plist-get info :query))
-        ;;                  (match-str (car (consult--command-split query)))
-        ;;                  (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
-        ;;                  (buffer consult-mu-view-buffer-name))
-        ;;        (add-to-list 'consult-mu--view-buffers-list buffer)
-        ;;        (funcall preview action
-        ;;                 (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
-        ;;                 )
-        ;;        (with-current-buffer consult-mu-view-buffer-name
-        ;;          (unless (one-window-p) (delete-other-windows))
-        ;;          )))
         )
         ('return
          (save-mark-and-excursion
@@ -233,7 +198,7 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
         ))))
 
 (defun consult-mu-contacts--transform (async builder)
-  "Adds annotation to minibuffer candiates for `consult-mu'.
+  "Adds annotation to minibuffer candiates for `consult-mu-contacts'.
 
 Returns ASYNC function after formating results with `consult-mu-contacts--format-candidate'.
 BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-builder')."
@@ -254,7 +219,7 @@ BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-b
          )))
 
 (defun consult-mu-contacts--builder (input)
-  "Build mu command line for searching messages by INPUT (e.g. `mu find INPUT)`."
+  "Build mu command line for searching contacts by INPUT (e.g. `mu cfind INPUT)`."
   (pcase-let* ((consult-mu-args (append consult-mu-args '("cfind")))
                (cmd (consult--build-args consult-mu-args))
                (`(,arg . ,opts) (consult--command-split input))
@@ -281,7 +246,7 @@ BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-b
               hl)))))
 
 (defun consult-mu-contacts--async (prompt builder &optional initial)
-"Query mu4e messages asynchronously.
+"Query mu4e contacts asynchronously.
 
 This is a non-interactive internal function. For the interactive version see `consult-mu-contacts'.
 
@@ -291,11 +256,11 @@ PROMPT is the prompt in the minibuffer (passed as PROMPT to `consult--red'.)
 BUILDER is an async builder function passed to `consult--async-command'.
 INITIAL is an optional arg for the initial input in the minibuffer. (passed as INITITAL to `consult--read'.)
 
-commandline arguments/options (see `mu find --help` in the command line for details) can be passed to the minibuffer input similar to `consult-grep'. For example the user can enter:
+commandline arguments/options (see `mu cfind --help` in the command line for details) can be passed to the minibuffer input similar to `consult-grep'. For example the user can enter:
 
 `#john -- --maxnum 10'
 
-this will search for contactss with the query \"john\", and retrives a maximum of 10 contacts.
+this will search for contacts with the query \"john\", and retrives a maximum of 10 contacts.
 
 Also, the results can further be narrowed by entering \"#\" similar to `consult-grep'.
 
@@ -316,15 +281,14 @@ will retrieve the message as the example above, then narrows down the completion
    :group #'consult-mu-contacts--group
    :add-history (consult-mu-contacts--add-history)
    :history '(:input consult-mu-contacts--history)
-   ;;:require-match t
    :category 'consult-mu-contacts
    :preview-key consult-mu-preview-key
    :sort t))
 
 (defun consult-mu-contacts (&optional initial noaction)
-    "Lists results of `mu find` Asynchronously.
+    "Lists results of `mu cfind` Asynchronously.
 
-This is an interactive wrapper function around `consult-mu-contacts--async'. It queries the user for a search term in the minibuffer, then fetches a list of messages for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
+This is an interactive wrapper function around `consult-mu-contacts--async'. It queries the user for a search term in the minibuffer, then fetches a list of contacts for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
 
 Upon selection of a candidate either
  - the candidate is returned if NOACTION is non-nil
@@ -337,7 +301,7 @@ For example the user can enter:
 
 `#john doe -- -n 10'
 
-this will run a contact earch with the query \"john doe\" and changes the search limit to 10.
+this will run a contact search with the query \"john doe\" and changes the search limit to 10.
 
 
 Also, the results can further be narrowed by entering \"#\" similar to `consult-grep'.

@@ -17,17 +17,32 @@
 (require 'consult-mu)
 
 ;;; Customization Variables
-(defcustom consult-mu-compose-use-dired-attachment nil
+(defcustom consult-mu-compose-use-dired-attachment 'in-dired
   "Use a dired buffer for multiple file attachment?
-By defualt this is set to nil.
-"
+If set to 'in-dired uses dired buffer and dired marks only when inside dired buffer
+If 't, consult-mu will always use dired buffer for selecting attachment files similar to what Doom Emacs does (see https://github.com/doomemacs/doomemacs/blob/bea81278fd2ecb65db6a63dbcd6db2f52921ee41/modules/email/mu4e/autoload/email.el#L272).
+
+If 'nil, consult-mu uses minibuffer completion for selection files to attach even if inside a dired buffer.
+
+By default this is set to 'in-dired."
   :group 'consult-mu
-  :type 'boolean)
+  :type '(choice (const :tag "Only use Dired if inside Dired Buffer" 'in-dired)
+                 (const :tag "Always use Dired" t)
+                 (const :tag "Never use Dired" nil)
+                 ))
+
+(defcustom consult-mu-large-file-warning-threshold large-file-warning-threshold
+  "Threshold for size of file to require confirmation for preview when selecting files to attach to emails.
+Files larger than this value in size will require user confirmation before previewing the file. Default value is set by `large-file-warning-threshold'. If nil, no cofnirmation is required."
+  :group 'consult-mu
+  :type '(choice integer (const :tag "Never request confirmation" nil)))
+
 
 (defcustom consult-mu-compose-preview-key consult-mu-preview-key
   "Preview key for `consult-mu-compose'.
 
-This is similar `consult-mu-preview-key' but explicitly for consult-mu-compose."
+This is similar to `consult-mu-preview-key' but explicitly for consult-mu-compose.
+It is recommended to set this to something other than 'any to avoid loading preview buffers for each file."
   :type '(choice (const :tag "Any key" any)
                  (list :tag "Debounced"
                        (const :debounce)
@@ -36,6 +51,10 @@ This is similar `consult-mu-preview-key' but explicitly for consult-mu-compose."
                  (const :tag "No preview" nil)
                  (key :tag "Key")
                  (repeat :tag "List of keys" key)))
+
+(defcustom consult-mu-embark-attach-file-key "a"
+  "Embark key binding for interactive file attachement."
+  :type '(choice (key :tag "Key")))
 
 (defvar consult-mu-compose-attach-history nil
   "History variable for file attachment used in `consult-mu-compose--read-file-attach'.")
@@ -61,9 +80,18 @@ INITIAL is the initial input in the minibuffer."
                               ('preview
                                (if cand
                                    (when (not (file-directory-p cand))
-                                     (funcall preview action
-                                              (find-file-noselect (file-truename cand))
-                                              ))))
+                                     (let* ((filename (file-truename cand))
+                                            (filesize (float
+                                                       (file-attribute-size
+                                                        (file-attributes filename))))
+                                            (confirm (if (and filename
+                                                              (>= filesize consult-mu-large-file-warning-threshold))
+                                                         (yes-or-no-p (format "File is %s Bytes. Do you really want to preview it?" filesize))
+                                                       t)))
+                                       (if confirm
+                                           (funcall preview action
+                                                    (find-file-noselect (file-truename cand))
+                                                    ))))))
                               ('return
                                cand
                                )
@@ -73,69 +101,61 @@ INITIAL is the initial input in the minibuffer."
                  :history 'consult-mu-compose-attach-history
                  ))
 
-(defun consult-mu-compose--read-file-remove (&optional file)
-"Select attached files to remove from email.
+(defun consult-mu-compose--read-file-remove (&optional initial)
+   "Select attached files to remove from email.
 
-FILE is the initial input in the minibuffer."
-  (pcase major-mode
-    ('org-msg-edit-mode
-     (let* ((current-files (org-msg-get-prop "attachment"))
-            (file (or file (if current-files
-                               (consult--read current-files
-                                              :prompt "Remove File:"
-                                              :category 'file
-                                              :state (lambda (action cand)
-                                                       (let ((preview (consult--buffer-preview)))
-                                                         (pcase action
-                                                           ('preview
-                                                            (if cand
-                                                                (when (not (file-directory-p cand))
-                                                                  (funcall preview action
-                                                                           (find-file-noselect (file-truename cand))
-                                                                           ))))
-                                                           ('return
-                                                            cand
-                                                            )
-                                                           )))
-                                              :preview-key consult-mu-compose-preview-key
-                                              )
-                             (progn
-                               (message "no files currently attached!")
-                               nil)))))
-       file))
-    ((or 'mu4e-compose-mode 'message-mode)
-     (goto-char (point-max))
-     (let ((file (or file
-     (consult--read
-      (cl-loop while (re-search-backward "<#part.*filename=\"\\(?1:.*\\)\"[[:ascii:][:nonascii:]]*?/part>" nil t)
-               collect (match-string-no-properties 1))
-      :prompt "Remove File:"
-      :category 'file
-      :state (lambda (action cand)
-               (let ((preview (consult--buffer-preview)))
-                 (pcase action
-                   ('preview
-                    (if cand
-                        (when (not (file-directory-p cand))
-                          (funcall preview action
-                                   (find-file-noselect (file-truename cand))
-                                   ))))
-                   ('return
-                    cand
-                    )
-                   )))
-      :preview-key consult-mu-compose-preview-key
-      ))))
-       file)
-    )))
+INITIAL is the initial input in the minibuffer."
+
+  (if-let ((current-files (pcase major-mode
+                          ('org-msg-edit-mode
+                           (org-msg-get-prop "attachment"))
+                          ((or 'mu4e-compose-mode 'message-mode)
+                           (goto-char (point-max))
+                           (cl-loop while (re-search-backward "<#part.*filename=\"\\(?1:.*\\)\"[[:ascii:][:nonascii:]]*?/part>" nil t)
+                                    collect (match-string-no-properties 1)))
+                          (_
+                           (error "Not in a compose message buffer")
+                           nil))))
+
+        (consult--read current-files
+                       :prompt "Remove File:"
+                       :category 'file
+                       :state (lambda (action cand)
+                                (let ((preview (consult--buffer-preview)))
+                                  (pcase action
+                                    ('preview
+                                     (if cand
+                                         (when (not (file-directory-p cand))
+                                           (let* ((filename (file-truename cand))
+                                                  (filesize (float
+                                                             (file-attribute-size
+                                                              (file-attributes filename))))
+                                                  (confirm (if (and filename
+                                                                    (>= filesize consult-mu-large-file-warning-threshold))
+                                                               (yes-or-no-p (format "File is %s Bytes. Do you really want to preview it?" filesize))
+                                                             t)))
+                                             (if confirm
+                                                 (funcall preview action
+                                                          (find-file-noselect (file-truename cand))
+                                                          ))))))
+                                    ('return
+                                     cand
+                                     )
+                                    )))
+                       :preview-key consult-mu-compose-preview-key
+                       :initial initial
+                       )
+      (progn
+        (message "No files currently attached!")
+        nil)))
 
 (defun consult-mu-compose-get-draft-buffer ()
-  "Queries user to select a mu4e draft buffer"
+  "Queries user to select a mu4e compose draft buffer"
   (save-excursion
   (if (and (consult-mu-compose-get-current-buffers)
-           (y-or-n-p "Attach files to existing mail composition buffer? "))
+           (y-or-n-p "Attach the files to an existing compose buffer? "))
       (consult--read (consult-mu-compose-get-current-buffers)
-                     :prompt "Message: "
+                     :prompt "Select Message Buffer: "
                      :require-match nil
                      :category 'consult-mu-messages
                      :preview-key consult-mu-preview-key
@@ -156,7 +176,7 @@ FILE is the initial input in the minibuffer."
                      ))))
 
 (defun consult-mu-compose-get-current-buffers ()
-  "Return a list of active message buffers."
+  "Return a list of active compose message buffers."
   (let (buffers)
     (save-current-buffer
       (dolist (buffer (buffer-list t))
@@ -168,37 +188,8 @@ FILE is the initial input in the minibuffer."
           (push (buffer-name buffer) buffers))))
     (nreverse buffers)))
 
-;; (defun consult-mu-compose--attach-file (file &rest args)
-;;   "Attach FILE to email."
-;;   (pcase major-mode
-;;     ('org-msg-edit-mode
-;;      (save-excursion
-;;        (let* ((current-files (org-msg-get-prop "attachment")))
-;;          (if (file-directory-p file)
-;;              (message "please select a file not a directory!")
-;;            (if (not (member file current-files))
-;;                (progn
-;;                  (org-msg-set-prop "attachment" (delete-dups (append current-files (list (file-truename file)))))
-;;                  (message (format "file %s added" file))
-;;                  (goto-last-change 0)
-;;                  (org-reveal)
-;;                  (consult-mu--pulse-line))
-;;              )))))
-;;     ('mu4e-compose-mode
-;;      (save-excursion
-;;        (goto-char (point-max))
-;;        (unless (eq (current-column) 0)
-;;          (insert "\n\n")
-;;          (forward-line 2))
-;;        (mail-add-attachment (file-truename file))
-;;        (goto-last-change 0)
-;;        (forward-line -2)
-;;        (consult-mu--pulse-line)
-;;        ))
-;;     ))
-
 (defun consult-mu-compose--attach-files (files &optional mail-buffer &rest args)
-  "Attach FILE to email in MAIL-BUFFER."
+  "Attach FILE to email in MAIL-BUFFER compose buffer."
   (let ((files (if (stringp files) (list files) files))
         (mail-buffer (or mail-buffer (if (version<= mu4e-mu-version "1.12")
                                  (mu4e-compose 'new) (mu4e-compose-new)))))
@@ -224,149 +215,43 @@ FILE is the initial input in the minibuffer."
              (forward-line -2)
              (consult-mu--pulse-line)
              )))
+        (_
+         (error "%s is not a compose buffer" (current-buffer)))
         ))))
 
-;; (defun consult-mu-compose--read-file-attach (&optional initial)
-;;   "Read files in the minibuffer to attach to an email.
-
-;; INITIAL is the initial input in the minibuffer."
-;;   (consult--read (completion-table-in-turn #'completion--embedded-envvar-table
-;;                                            #'completion--file-name-table)
-;;                  :prompt "Attach File: "
-;;                  :require-match t
-;;                  :category 'file
-;;                  :initial (or initial default-directory)
-;;                  :lookup (lambda (sel cands &rest args)
-;;                            (file-truename sel))
-;;                  :state (lambda (action cand)
-;;                           (let ((preview (consult--buffer-preview)))
-;;                             (pcase action
-;;                               ('setup
-;;                                ;;(setq consult-mu-compose-current-draft-buffer (current-buffer))
-;;                                )
-;;                               ('preview
-;;                                ;;(print consult-mu-compose-current-draft-buffer)
-;;                                (if cand
-;;                                    (when (not (file-directory-p cand))
-;;                                      (funcall preview action
-;;                                               (find-file-noselect (file-truename cand))
-;;                                               ))))
-;;                               ('return
-;;                                cand
-;;                                )
-;;                               )))
-;;                  :preview-key consult-mu-compose-preview-key
-;;                  :history 'consult-mu-compose-attach-history
-;;                  ))
-
-;; (defun consult-mu-compose-dired-attach-files (&optional files-to-attach)
-;;   "Attaches files to mu4e message using a dired buffer.
-;; When called in a mail compose buffer, `read-file-name'to either
-;; attach a file, or select a folder to open dired in.
-;; When called in a dired buffer, attaches marked files to a message. If a compose buffer exists,
-;; asks user whether to attach to existing message otherwise opens a new message darft buffer and attaches the files.
-;; When called in a mu4e-compose or org-msg buffer,  and select file attachments
-;; (using `consult-mu-compose-dired-attach-mode').
-
-;; When otherwise called, open a dired buffer and enable `consult-mu-compose-dired-attach-mode'."
-;;   ;; TODO add ability to attach files (+dirs) as a single (named) archive
-;;   (interactive "p")
-;;   (pcase major-mode
-
-;;     ((or 'mu4e-compose-mode 'org-msg-edit-mode)
-;;      (let ((mail-buffer (current-buffer))
-;;            (location (consult-mu-compose--read-file-attach)))
-;;        (if (and (file-truename location) (not (file-directory-p location)))
-;;            (consult-mu-compose--attach-file (file-truename location))
-;;          (if (and (file-directory-p location) consult-mu-compose-use-dired-attachment)
-;;            (progn
-;;              (split-window-sensibly)
-;;              (with-current-buffer (dired location)
-;;                (setq-local dired-mail-buffer mail-buffer)
-;;                ))
-;;            (if (file-directory-p location)
-;;                (progn
-;;                  (while (file-directory-p location)
-;;                    (setq location (consult-mu-compose--read-file-attach location)))
-;;                  (consult-mu-compose--attach-file (file-truename location)))))))
-;;      )
-;;     ('dired-mode
-;;      (unless (and files-to-attach (/= 1 files-to-attach))
-;;        (setq files-to-attach
-;;              (delq nil
-;;                    (mapcar
-;;                     ;; don't attach directories
-;;                     (lambda (f) (if (file-directory-p f)
-;;                                     nil
-;;                                   f))
-;;                           (nreverse (dired-map-over-marks (dired-get-filename) nil))))))
-;;      (if (not files-to-attach)
-;;          (message "No files marked to attach!")
-;;        (if-let ((mail-target-buffer (bound-and-true-p dired-mail-buffer)))
-;;           (switch-to-buffer mail-target-buffer)
-;;          (if (and (consult-mu-compose-get-current-buffers)
-;;                   (y-or-n-p "Attach files to existing mail composition buffer? "))
-;;              (progn (setf mail-target-buffer
-;;                           (completing-read "Message: " (consult-mu-compose-get-current-buffers)))
-;;                     (if (one-window-p) (kill-buffer)
-;;                     (kill-buffer-and-window))
-;;                     (switch-to-buffer mail-target-buffer))
-;;            (progn (if (one-window-p) (kill-buffer)
-;;                     (kill-buffer-and-window))
-;;                   (mu4e-compose 'new)))))
-;;      (mapcar
-;;       (pcase major-mode
-;;         ('mu4e-compose-mode #'mail-add-attachment)
-;;         ('org-msg-edit-mode #'org-msg-attach-attach))
-;;       files-to-attach)
-;;      (save-excursion
-;;        (goto-last-change 0)
-;;        (pcase major-mode
-;;          ('org-msg-edit-mode (org-reveal))
-;;          ('mu4e-compose-mode (forward-line -2)))
-;;        (consult-mu--pulse-line))
-;;      )
-;;     (_
-;;      (let ((location (consult-mu-compose--read-file-attach)))
-;;        (when (file-directory-p location)
-;;          (if consult-mu-compose-use-dired-attachment
-;;            (progn
-;;              (split-window-sensibly)
-;;              (dired (file-truename location))
-;;               )
-;;            (while (file-directory-p location)
-;;              (setq location (consult-mu-compose--read-file-attach location)))))
-;;          (if (and (consult-mu-compose-get-current-buffers)
-;;                     (y-or-n-p "Attach files to existing mail composition buffer? "))
-;;                (let ((mail-buffer
-;;                       (completing-read "Message: " (consult-mu-compose-get-current-buffers))))
-;;                  (switch-to-buffer mail-buffer))
-;;              (mu4e-compose 'new))
-;;            (consult-mu-compose--attach-file (file-truename location)))
-;;          ))
-;;     )
-
-(defun consult-mu-compose--remove-file (file &rest args)
-"Remove File from current attachments"
-  (save-excursion
-    (pcase major-mode
-      ('org-msg-edit-mode
-       (let ((current-files (org-msg-get-prop "attachment")))
-         (when (member file current-files)
-           (org-msg-set-prop "attachment" (remove file current-files))
-           (message (format "file %s removed" file))
-           (goto-last-change 0)
-           (org-reveal)
-           )))
-      ('mu4e-compose-mode
-       (goto-char (point-min))
-       (when (replace-regexp (format "<#part.*filename=\"%s\"[[:ascii:][:nonascii:]]*?/part>" file) "")
-         (message (format "file %s removed" file))
-         (goto-last-change 0)
-         (consult-mu--pulse-line)
-         (whitespace-cleanup)
-         ))
-      )))
+(defun consult-mu-compose--remove-files (files &optional mail-buffer &rest args)
+  "Removes FILES from current attachments in MAIL-BUFFER."
+  (let ((files (if (stringp files) (list files) files))
+        (mail-buffer (or mail-buffer (current-buffer))))
+    (with-current-buffer mail-buffer
+      (save-excursion
+        (pcase major-mode
+          ('org-msg-edit-mode
+           (let ((current-files (org-msg-get-prop "attachment"))
+                 (removed-files (list)))
+             (mapcar (lambda (file)
+                       (when (member file current-files)
+                         (org-msg-set-prop "attachment" (delete-dups (remove file current-files)))
+                         (add-to-list 'removed-files file)
+                         (setq current-files (org-msg-get-prop "attachment"))
+                         (goto-last-change 0)
+                         (org-reveal)
+                         (consult-mu--pulse-line)
+                         )) files)
+             (message "file(s) %s detached" (mapconcat 'identity removed-files ","))))
+          ('mu4e-compose-mode
+           (let ((removed-files (list)))
+             (mapcar (lambda (file)
+                       (goto-char (point-min))
+                       (while (re-search-forward (format "<#part.*filename=\"%s\"[[:ascii:][:nonascii:]]*?/part>" file) nil t)
+    (replace-match "" nil nil)
+                         (setq removed-files (append removed-files (list file)))
+                         (goto-last-change 0)
+                         (consult-mu--pulse-line)
+                         (whitespace-cleanup)
+                         )) files)
+             (message "file(s) %s detached" (mapconcat 'identity removed-files ", ")))
+           ))))))
 
 (defun consult-mu-compose-attach (&optional files mail-buffer)
   "Attach FILES to email interactively."
@@ -492,7 +377,7 @@ FILE is the initial input in the minibuffer."
   (interactive)
   (save-mark-and-excursion
       (when-let (file (consult-mu-compose--read-file-remove))
-           (consult-mu-compose--remove-file file)
+           (consult-mu-compose--remove-files file)
            )
       ))
 
