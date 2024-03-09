@@ -379,7 +379,12 @@ For example if =consult-mu-contacts-group-by= is set to =:domain= then the domai
   This variable stores the function that is called when a contact is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu-contacts--list-messages-action= which searches for all the messages from that contact by calling =consult-mu=.
 
 * Features and Demos
-For a detailed description of why this package is useful, and some useful screenshosts showing work flows, you can read my blog post here: [[https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/]]
+For a detailed description of why this package is useful, and some useful screenshosts showing work flows, you can read my blog post here:
+
+#+attr_org: :width 800px :height nilpx
+#+attr_latex: :width 800px :height nilpx
+#+attr_html: :width 800px :height nilpx
+[[https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/]]
 
 ** Search
 consult-mu uses [[https://github.com/minad/consult#asynchronous-search][consult's asynchronous search]] feature. In order to search a query you can type your standard Mu4e query after =#= sign in the minibuffer. Here are some examples:
