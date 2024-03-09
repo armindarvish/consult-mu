@@ -410,6 +410,7 @@ In the example above, we first run a search for *tickets* and sort the results w
 
 Note that narrow downs are similar to other narrow downs in the minibuffer, therefore here you cannot use mu4e search syntax but you can use regular expressions. Also, the narrow down searches in the entire header string, therefore you can use any information available in the headers (date, title, email addresses, flags,...) for narrow down. (to change the format of the header, take a look at [[id:155CF359-63D0-4D4D-B0BD-7C089E2D9B3C][=consult-mu-headers-template=]]. Here is a screenshot for doing a search and narrow:
 
+https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-search-narrow.gif
 
 ** Saved Searches and Quick Access History
 consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu-dynamic= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu-dynamic or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
