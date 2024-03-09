@@ -381,9 +381,6 @@ For example if =consult-mu-contacts-group-by= is set to =:domain= then the domai
 * Features and Demos
 For a detailed description of why this package is useful, and some useful screenshosts showing work flows, you can read my blog post here:
 
-#+attr_org: :width 800px :height nilpx
-#+attr_latex: :width 800px :height nilpx
-#+attr_html: :width 800px :height nilpx
 [[https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/]]
 
 ** Search
@@ -415,6 +412,9 @@ In the example above, we first run a search for *tickets* and sort the results w
 
 Note that narrow downs are similar to other narrow downs in the minibuffer, therefore here you cannot use mu4e search syntax but you can use regular expressions. Also, the narrow down searches in the entire header string, therefore you can use any information available in the headers (date, title, email addresses, flags,...) for narrow down. (to change the format of the header, take a look at [[id:155CF359-63D0-4D4D-B0BD-7C089E2D9B3C][=consult-mu-headers-template=]]. Here is a screenshot for doing a search and narrow:
 
+#+ATTR_ORG: :width 800px
+#+ATTR_LATEX: :width 800px
+#+ATTR_HTML: :width 800px
 https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-search-narrow.gif
 
 ** Saved Searches and Quick Access History
