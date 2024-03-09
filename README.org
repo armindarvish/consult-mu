@@ -79,11 +79,12 @@ Make sure you load consult and mu4e (e.g. =require consult=, =require mu4e=) bef
 ** Configuration
 consult-mu is built with the idea that the user should be able to customize everything based on their use-case, therefore the user is very much expected to configure consult-mu.
 
-I recommend you read through this section and understand how to configure the package according to your needs and for your specific use-case, but if you just want a drop-in minimal config, look at the snippet below (for snippet with extended settings see [[id:99667231-6F96-4913-834F-7C031E3CC44C][Example Customization for Good Performance and Functionality]]).
+I recommend you read through this section and understand how to configure the package according to your needs and for your specific use-case, but if you just want a drop-in minimal config, look at the snippet below (for snippet with extended settings see [[id:99667231-6F96-4913-834F-7C031E3CC44C][extended feature config]]).
 
+*** Minimal Config
 #+begin_src emacs-lisp
 (use-package consult-mu
-  :straight (consult-mu :type git :host github :repo "armindarvish/consult-mu" :branch "develop")
+  :straight (consult-mu :type git :host github :repo "armindarvish/consult-mu" :branch "main")
   :after (consult mu4e)
   :custom
   ;;maximum number of results shown in minibuffer
@@ -99,31 +100,83 @@ I recommend you read through this section and understand how to configure the pa
   )
 #+end_src
 
-*** Customization
+*** Extended Feature Config
+:PROPERTIES:
+:ID:       99667231-6F96-4913-834F-7C031E3CC44C
+:END:
+
+Here is a customization that gives you the full feature experience including utilities for attaching/detaching files and searching contacts, etc.
+
+#+begin_src emacs-lisp
+(use-package consult-mu
+  :straight (consult-mu :type git :host github :repo "armindarvish/consult-mu" :branch "develop" :files (:defaults "extras/*.el"))
+  :after (consult mu4e)
+  :custom
+  ;;maximum number of results shown in minibuffer
+  (consult-mu-maxnum 200)
+  ;;show preview when pressing any keys
+  (consult-mu-preview-key 'any)
+  ;;do not mark email as read when previewed. If you turn this to t, be aware that the auto-loaded preview if the preview-key above is 'any would also get marked as read!
+  (consult-mu-mark-previewed-as-read nil)
+  ;;mark email as read when selected.
+  (consult-mu-mark-viewed-as-read t)
+  ;;use reply to all when composing reply emails
+  (consult-mu-use-wide-reply t)
+  ;; define a template for headers view in minibuffer. The example below adjusts the width based on the width of the screen.
+  (consult-mu-headers-template (lambda () (concat "%f" (number-to-string (floor (* (frame-width) 0.15))) "%s" (number-to-string (floor (* (frame-width) 0.5))) "%d13" "%g" "%x")))
+
+  :config
+  ;;create a list of saved searches for quick access using `histroy-next-element' with `M-n' in minibuffer. Note the "#" character at the beginning of each query! Change these according to
+  (setq consult-mu-saved-searches-dynamics '("#flag:unread"))
+  (setq consult-mu-saved-searches-async '("#flag:unread"))
+  ;; require embark actions for marking, replying, forwarding, etc. directly from minibuffer
+  (require 'consult-mu-embark)
+  ;; require extra module for composing (e.g. for interactive attachment) as well as embark actions
+  (require 'consult-mu-compose)
+  (require 'consult-mu-compose-embark)
+  ;; require extra module for searching contacts and runing embark actions on contacts
+  (require 'consult-mu-contacts)
+  (require 'consult-mu-contacts-embark)
+  ;; change the prefiew key for compose so you don't open a preview of every file when selecting files to attach
+  (setq 'consult-mu-compose-preview-key "M-o")
+  ;; pick a key to bind to consult-mu-compose-attach in embark-file-map
+  (setq 'consult-mu-embark-attach-file-key "C-a")
+  (consult-mu-compose-embark-bind-attach-file-key)
+  ;; choose if you want to use dired for attaching files (choice of 'always, 'in-dired, or nil)
+  (customize-save-variable 'consult-mu-compose-use-dired-attachment 'in-dired)
+  )
+
+#+end_src
+
+*** Customization  Variables
 The following customizable variables are provided:
 
-**** =consult-mu-headers-buffer-name=
+**** main
+***** =consult-mu-default-command=
+A command function that is called when =M-x consult-mu= is called. This is useful for defining special conditions to use =consult-mu-dynamics= or =consult-mu-async=. By default it is bound to =consult-mu-dynamics=, therefore =M-x consult-mu= simply calls =consult-mu-dynamics=.
+
+***** =consult-mu-headers-buffer-name=
 This is the default name for HEADERS buffer explicitly for consult-mu. It is, by default, set to ="**consult-mu-headers**"=. Note that currently, the header-buffer name is a constant string and shared between all instances of consult-mu calls. This is to prevent running operations in parallel that cause out-of-sync issues.
 
-**** =consult-mu-view-buffer-name=
+***** =consult-mu-view-buffer-name=
 This is the default name for VIEW buffer explicitly for consult-mu. It is, by default, set to ="**consult-mu-view**"=. Note that currently, the view-buffer name is a constant string and shared between all instances of consult-mu calls. This is to prevent creating too many preview buffers and executing operations (such as marking) in parallel that cause out-of-sync issues.
 
-**** =consult-mu-args=
+***** =consult-mu-args=
 This is the default name of the =mu= command line argument. It is set to ="mu"= by default, but can be modified for example if mu is at a different path on your system.
 
-**** =consult-mu-maxnum=
+***** =consult-mu-maxnum=
 Maximum number of messages shown in search results (in consult-mu minibuffer completion table). This is a global option for consult-mu and consult-mu-async, but can be overriden by providing command line arguments in input for example, the following search would fetch up to 1000 results
 
 #+begin_example
 #github -- --maxnum 1000
 #+end_example
 
-**** =consult-mu-headers-fields=
+***** =consult-mu-headers-fields=
 This variable is used to format the headers inside minibuffer. This takes a similar format to =mu4e-headers-fields= and changes the format of the header only in minibuffer (=consult-mu-dynamic= or =consult-mu-async=).
 
 Note that it is generally recommended to use =consult-mu-headers-template= below because it has more options and does not affect the consult-mu-headers buffer.
 
-**** =consult-mu-headers-template=
+***** =consult-mu-headers-template=
 :PROPERTIES:
 :ID:       155CF359-63D0-4D4D-B0BD-7C089E2D9B3C
 :END:
@@ -152,7 +205,7 @@ For example, the string ="%d13%s50%f17%G"= would make a header containing =13= c
 #+attr_html: :width 800px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-headers-template.png]]
 
-**** =consult-mu-search-sort-field=
+***** =consult-mu-search-sort-field=
 This defines the field that is used for sorting the results (refer to documentation on the variable =mu4e-search-sort-field= for more info). It has to be one of the keywords:
 - =:date=  sort by date
 - =:subject= sort by title of the email
@@ -171,7 +224,7 @@ For example the following input in the minibuffer will search for emails that ar
 #flag:unread -- -s s
 #+end_example
 
-**** =consult-mu-search-sort-direction=
+***** =consult-mu-search-sort-direction=
 Direction of sort. It can either be ='ascending= for A->Z (low number to high number) or ='descending= for Z->A (high number to low number). Note that if a command line argument for reverse order (either -z or --reverse) is provided in the minibuffer, the order will be reverse of the setting defined by this variable.
 
 For example, if =consult-mu-search-sort-field= is set to =:date= and =consult-mu-search-sort-direction= is set to ='descending= the messages are sortes chronologically from the newest on top to the oldest. Then providing a reverse order argument in the minibuffer can dynamically reverse the sort direction:
@@ -182,7 +235,7 @@ For example the following input in the minibuffer searches for all =unread= emai
 #+end_example
 
 
-**** =consult-mu-search-threads=
+***** =consult-mu-search-threads=
 This variable determines whether threads are calculated for search results or not similar to the =mu4e-search-threads= variable.
 
 Note that per mu4e docs:
@@ -194,7 +247,7 @@ When this variable is set to nil, it can still be truned on by adding command li
 #flag:unread -- -t
 #+end_example
 
-**** =consult-mu-group-by=
+***** =consult-mu-group-by=
 This variable determines what field is used to group messages. This aloows quick movement between groups (For example with =vertico-next-group= if you use [[https://github.com/minad/vertico][vertico]])
 
 By default it is set to :date. But can be any of the following keywords:
@@ -220,18 +273,18 @@ Note that grouping works alongside sorting. For example if  =consult-mu-group-by
 #+attr_html: :width 800px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-grouping-example.png]]
 
-**** =consult-mu-mark-previewed-as-read=
+***** =consult-mu-mark-previewed-as-read=
 This determines whether a message is marked as =read= when it is simply previewed (see =consult-mu-preview-key= above and documentation on =consult-preview-key=).
 
 Note that when =consult-mu-preview-key= is set to ='any=, then as soon as =consult-mu= or =consult-mu-async= retrieve some results a preview for the first message is shown and this can be marked as read if =consult-mu-mark-previewed-as-read= is set to t.
 
-**** =consult-mu-mark-viewed-as-read=
+***** =consult-mu-mark-viewed-as-read=
 This determines whether a message is marked as =read= when it is viewed (i.e. when the minibuffer candidate is selected by hitting =RET=).
 
-**** =consult-mu-preview-key=
+***** =consult-mu-preview-key=
 This is similar to =consult-preview-key= but only for =consult-mu=. By default, it is set to the value of consult-preview-key to keep consistent experience across different consult packages, but you can set this variable explicitly for consult-mu.
 
-The recommended option si to set this to ='any= so as you naviagte over the candidates you see previews updated.
+The recommended option is to set this to ='any= so as you naviagte over the candidates you see previews updated.
 
 #+begin_src emacs-lisp
 (setq consult-mu-preview-key 'any)
@@ -246,7 +299,7 @@ If the option above slows down your system, and you only want to load previews o
 You can also turn previews off by setting this variable to =nil=, but this is not generally recommended.
 
 
-**** =consult-mu-highlight-matches=
+***** =consult-mu-highlight-matches=
 This variable determines if consult-mu highlights search queries in minibuffer or preview buffers. By default it is set to t.
 
 When it is set to t, all matches of the search term are highlighted in the minibuffer allowing you to notice why the email is a search hit.
@@ -270,46 +323,64 @@ Note that when the candidate is selected (i.e. by pressing =RET=), the highlight
 #+attr_html: :width 800px :height nilpx
 [[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-highlight-matches-view.png]]
 
-**** =consult-mu-action=
+***** =consult-mu-action=
 This variable stores the function that is called when a message is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu--view-action= which opens both the headers buffer and view buffer and shows the content of the selected message.
 
-*** Example Customization for Good Performance and Functionality
-:PROPERTIES:
-:ID:       99667231-6F96-4913-834F-7C031E3CC44C
-:END:
-
-Here is a good customization for great performance as well as functionality:
-
+**** compose
+These variables are only available after loading the compose module;
 #+begin_src emacs-lisp
-(use-package consult-mu
-  :straight (consult-mu :type git :host github :repo "armindarvish/consult-mu" :branch "develop" :files (:defaults "extras/*.el"))
-  :after (consult mu4e)
-  :custom
-  ;;maximum number of results shown in minibuffer
-  (consult-mu-maxnum 200)
-  ;;show preview when pressing any keys
-  (consult-mu-preview-key 'any)
-  ;;do not mark email as read when previewed. If you turn this to t, be aware that the auto-loaded preview if the preview-key above is 'any would also get marked as read!
-  (consult-mu-mark-previewed-as-read nil)
-  ;;mark email as read when selected.
-  (consult-mu-mark-viewed-as-read t)
-  ;; define a template for headers view in minibuffer. The example below adjusts the width based on the width of the screen.
-  (consult-mu-headers-template (concat "%f" (number-to-string (floor (* (frame-width) 0.18))) "%s" (number-to-string (floor (* (frame-width) 0.6))) "%d13" "%g" "%x"))
-  :config
-  ;;create a list of saved searches for quick access using `histroy-next-element' with `M-n' in minibuffer. Note the "#" character at the beginning of each query!
-  (setq consult-mu-saved-searches '("#flag:unread"
-                                    "#(maildir:/inbox/"))
-  ;; require embark actions for marking, replying, forwarding, etc. directly from minibuffer
-  (require 'consult-mu-embark)
-  ;; require extra module for composing (e.g. for interactive attachment)
-  (require 'consult-mu-compose)
-  ;; require extra module for searching contacts and runing embark actions on contacts
-  (require 'consult-mu-contacts)
-  (require 'consult-mu-contacts-embark)
-  )
+(require 'consult-mu-compose)
 #+end_src
 
+***** =consult-mu-compose-use-dired-attachment=
+This variable defines, whether =consult-mu= uses dired buffers for selecting files to attach. If it is set to ='always=, consult-mu will always jump to a dired buffer for selecting files to attach. It it is set to ='in-dired=, consult-mu only uses dired (a.k.a. file at point or marked files) for attaching files when already inside a dired buffer. If it is set to =nil=, consult-mu uses minibuffer completion for file selection for attachments.
+***** =consult-mu-large-file-warning-threshold=
+A threshold to make sure very large files are not accidentally opened when previewing files that the user wants to attach to an email. If file is larger than this threshold, the user is asked to confirm before loading the file buffer.
+
+***** =consult-mu-compose-preview-key=
+This is similar to =consult-mu-preview-key= but only for =consult-mu-compose=. This is used to preview files when selecting files for attachments. By default, it is set to the follow the value of =consult-mu-preview-key= to keep consistent experience across the package. *But it is recommended to change this to something other than ='any= becuase otherweise every file is previewd as the user is navigating through folders to select files to attach to an email.
+
+#+begin_src emacs-lisp
+(setq consult-mu-compose-preview-key "M-o")
+#+end_src
+
+***** =consult-mu-embark-attach-file-key=
+This variable defines a key that can be bound to =consult-mu-compose-attach= in =emabrk-file-map=, therefore one can call embark on any file and use this key to attach it to an email. This can be bound to "a" or "C-a":
+
+#+begin_src emacs-lisp
+(setq consult-mu-embark-attach-file-key "C-a")
+#+end_src
+
+Running the function =consult-mu-compose-embark-bind-attach-file-key= binds this key, but any other key can be passed to this function as well to override the customization variable:
+
+#+begin_src emacs-lisp
+(consult-mu-compose-embark-bind-attach-file-key)
+#+end_src
+
+**** contacts
+These variables are only available after loading the contacts module;
+#+begin_src emacs-lisp
+(require 'consult-mu-contacts)
+#+end_src 
+
+***** =consult-mu-contacts-group-by=
+This variable determines what field is used to group contacts, which allows quick movement between groups (For example with =vertico-next-group= if you use [[https://github.com/minad/vertico][vertico]])
+
+By default it is set to name. But can be any of the following keywords:
+
+  - =:name=         group by contact name
+  - =:email=        group by email of the contact
+  - =:domain=       group by the domain of the contact's email (e.g. domain.com in user@domain.com)
+  - =:user=         group by the ncontact's user name (e.g. user in user@domain.com)
+
+For example if =consult-mu-contacts-group-by= is set to =:domain= then the domain of the email address is used to group contacts. This is useful for example if you are looking for all emails from a specific company!
+
+***** =consult-mu-contacts-action= 
+  This variable stores the function that is called when a contact is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu-contacts--list-messages-action= which searches for all the messages from that contact by calling =consult-mu=.
+
 * Features and Demos
+For a detailed description of why this package is useful, and some useful screenshosts showing work flows, you can read my blog post here: [[https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/]]
+
 ** Search
 consult-mu uses [[https://github.com/minad/consult#asynchronous-search][consult's asynchronous search]] feature. In order to search a query you can type your standard Mu4e query after =#= sign in the minibuffer. Here are some examples:
 
@@ -341,9 +412,11 @@ Note that narrow downs are similar to other narrow downs in the minibuffer, ther
 
 
 ** Saved Searches and Quick Access History
-Consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu-dynamic= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu-dynamic or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
+consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu-dynamic= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu-dynamic or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
 
 Here is a screenshot of quickly going through some saved searches (using =next-history-element= which is bound to =M-n= by default).
+
+Similarly =consult-mu-compose-attach=, =consult-mu-compose-detach=, and =consult-mu-contacts= have their own history elements as wels future history elemetns (for example email in the current message buffer gets added to future-history for searching contacts).
 
 ** Integration with Embark
 consult-mu provides integration with [[https://github.com/oantolin/embark][embark]] defined in =consult-mu-embark.el= If you use embark, you can use these commands to run actions on the search results directly from minibuffer. For example, you can call =consult-mu-embark-reply= to reply to a message or =consult-mu-embark-mark-for-refile= to refile (a.k.a. archive) the message and so on.
@@ -355,7 +428,7 @@ You can also use =embark-select= and =embark-act-all= to run the same command on
 ** Extras (attachments, contacts, ...)
 In addition to improvements for searching, consult-mu also provides extra features for composing, contacts, ... These features are defined in the files under the =extras= folder.
 *** Attachments
-By default, attaching files to emails with mu4e is not very intuitive or interactive. If you use [[https://github.com/jeremy-compostella/org-msg][org-msg]], it provides an interactive command for attaching files, but it is only for one file at a time and for each file you need to go through some menus. Some emacs configs, like [[https://github.com/doomemacs/doomemacs][doomemacs]], do provide their own commands to allow using a dired buffer to attach multiple files to an email (see [[https://github.com/doomemacs/doomemacs/blob/986398504d09e585c7d1a8d73a6394024fe6f164/modules/email/mu4e/autoload/email.el#L272C8-L272C26][+mu4e/attach-files]]). Personally, I prefer using a minibuffer completion (instead of switching to a dired buffer) unless I am already in a dired buffer. The [[file:extras/consult-mu-compose.el][consult-mu-compose]] module provides the commands that allow amore streamlined workflow.
+By default, attaching files to emails with mu4e is not very intuitive or interactive. If you use [[https://github.com/jeremy-compostella/org-msg][org-msg]], it provides an interactive command for attaching files, but it is only for one file at a time and for each file you need to go through some menus. Some emacs configs, like [[https://github.com/doomemacs/doomemacs][doomemacs]], do provide their own commands to allow using a dired buffer to attach multiple files to an email (see [[https://github.com/doomemacs/doomemacs/blob/986398504d09e585c7d1a8d73a6394024fe6f164/modules/email/mu4e/autoload/email.el#L272C8-L272C26][+mu4e/attach-files]]). Personally, I prefer using a minibuffer completion (instead of switching to a dired buffer) unless I am already in a dired buffer. The [[file:extras/consult-mu-compose.el][consult-mu-compose]] provides the utilities and customization settings to achieve interactive multi-file attachment.
 
 To use attachment extras, you need to load the compose module by:
 #+begin_src emacs-lisp
@@ -363,18 +436,23 @@ To use attachment extras, you need to load the compose module by:
 (require 'consult-mu-compose-embark) ;;optionally load embark actions for compose
 #+end_src
 
-It is highly recommended that you also change the preview key binding for =consult-mu-compose= to something other than ='any= because seeing a preview of every file when you are navigating through the minibuffer may be slow and annoying. It's easier to get a preview of the files you are interested in with a key binding like =C-o= than to seea preview of every file.
+It is highly recommended that you also change the preview key binding for =consult-mu-compose= to something other than ='any= because seeing a preview of every file when you are navigating through the minibuffer may be slow and annoying. It's easier to get a preview of the files you are interested in with a key binding like =M-o= than to see a preview of every file.
 
 #+begin_src emacs-lisp
-(setq consult-mu-compose-preview-key "C-o")
+(setq consult-mu-compose-preview-key "M-o")
 #+end_src
-**** Attaching Files:
-The interactive command =consult-mu-compose-attach= provides an interactive command to attach files to an email and it tries its best to provide an intuitive interface. Here are some important notes:
+**** Attaching Files
+=consult-mu-compose-attach= provides an interactive command to attach files to an email and it tries its best to provide an intuitive interface. 
+
+Here are some features:
+
 - interactively selecitng draft compose buffer:
 In a compose buffer (e.g. =mu4e-compose-mode=, =message-mode=, =org-msg-edit-mode=), it assumes that the user wants to attach files to the current message. In other buffers it asks the user to select a current compose buffer or creates a new one if noe exists.
+
 - interactively selecting files:
 For selecting files, it can either use minibuffer completion or a dired buffer. If the customization variable =consult-mu-compose-use-dired-attachment= is set to =always=, it always uses dired buffer similar to what dom emacs does. If it is set to ='in-dired= it only uses dired when inside a dired-mode buffer. and if it is set to =nil=, it will always use minibuffer completion.
 When using dired to chose files, one can mark multiple files to attach to a message. Furthermore, if the command =consult-mu-compose-attach= is called from within a compose buffer (e.g. =mu4e-compose-mode=, =message-mode=, =org-msg-edit-mode=), runing =embrak-dwim= on the file will attach the file to the current message. This is specially useful if you use =embark-dwim= with =no-quit= option ([[https://github.com/oantolin/embark#quitting-the-minibuffer-after-an-action][embark#quitting-the-minibuffer-after-an-action]]). Here is an example on how to define =embark-dwim-noquit=:
+
 #+begin_src emacs-lisp
 (defun embark-dwim-noquit ()
      "Run action but don't quit the minibuffer afterwards."
@@ -382,18 +460,22 @@ When using dired to chose files, one can mark multiple files to attach to a mess
      (let ((embark-quit-after-action nil))
        (embark-dwim)))
 #+end_src
-Then you can just attach multiple files to the same message from any folder by using the minibuffer completion. See the screenshot below:
+Then you can just attach multiple files to the same message from any folder by using the minibuffer completion. See the screenshot in my blog post here: https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/
 
 **** Removing attachments:
 Similarly, =consult-mu-compose-detach= provides an interactive command to remove files that are already attached to the current message. It uses minibuffer completion to select a file to remove. Similar to what mentioned above, embark-dwim (or a no-quit version of it) can be used to remove multiple files from the same message. note that the minibuffer completion list does not get dynamically updated when a file is removed (This is something I may improve in the future but for now it works just fine I think).
+See the screenshot in my blog post here: https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/
+
 
 *** Contacts
-=consult-mu-contacts= provides an interactive way to search mu contacs. Upon selection of a candidate, all the emails form the contact is searched by using =consult-mu-dynamic=. Note that mu does not have a stored list of contacts. Rather, contacts are generated dynamically from the email fields in all messages in the database, including email fields that might be invalid! To use =consult-mu-contacts=, you need to load the contacts module by:
+=consult-mu-contacts= provides an interactive way to search mu contacs. By default, when a candidate is selected, all the emails form the contact is searched by using =consult-mu=. This can be customized to oyher functions (e.g. compose an email to the contact) by seeting =consult-mu-contacts-action=. Note that mu does not have a stored list of contacts. Rather, contacts are generated dynamically from the email fields in all messages in the database, including email fields that might be invalid! To use =consult-mu-contacts=, you need to load the contacts module by:
 
 #+begin_src emacs-lisp
 (require 'consult-mu-contacts)
 (require 'consult-mu-contacts-embark) ;;optionally load embark actions for contacts
 #+end_src
+
+See the screenshot in my blog post here: https://www.armindarvish.com/post/improve_your_mu4e_workflow_with_consult-mu/
 
 
 * Bug reports
