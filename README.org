@@ -415,7 +415,7 @@ Note that narrow downs are similar to other narrow downs in the minibuffer, ther
 #+ATTR_ORG: :width 800px
 #+ATTR_LATEX: :width 800px
 #+ATTR_HTML: :width 800px
-https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-search-narrow.gif
+[[https://github.com/armindarvish/consult-mu/blob/screenshots/screenshots/consult-mu-search-narrow.gif]]
 
 ** Saved Searches and Quick Access History
 consult-mu does have a history variable and keeps record of your previous searches. These searches can quickly be accessed using =previous-history-element= (bound to =M-p= by default). In addition, you can have a list of saved searches for quick access by modifying the variable =consult-mu-saved-searches-dynamic= or =consult-mu-saved-searches-async= for =consult-mu-dynamic= and =consult-mu-async=, respectively. These are lists of mu4e query strings that get added to future-history when you run consult-mu-dynamic or consult-mu-async. By default, =consult-mu-saved-searches-async= is set to inherit from =consult-mu-saved-searches-dynamic=, but you can modify them independently. This allows separating saved searches that are more suitable for async search from those that are better done with dynamic collection.
