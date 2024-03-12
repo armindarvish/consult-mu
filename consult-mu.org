@@ -2587,6 +2587,15 @@ By default it is bound to `consult-mu-contacts--list-messages-action'.
   :group 'consult-mu
   :type '(choice (function :tag "(Default) Show Messages from Contact" #'consult-mu-contacts--list-messages-action)
                  (function :tag "Custom Function")))
+
+(defcustom consult-mu-contacts-ignore-list message-prune-recipient-rules
+  "List of Regexps to ignore when searching contacts.
+
+This is useful to filter certain addreses from contacts. For example you can remove no-reply adresses by setting this variable to '((“no-reply@example.com”)).
+By default it is inherited from `message-prune-recipient-rules'.
+"
+  :group 'consult-mu
+  :type '(repeat (regexp)))
 #+end_src
 
 *** Other Variables
