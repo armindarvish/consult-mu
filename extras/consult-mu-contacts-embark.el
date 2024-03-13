@@ -31,6 +31,12 @@
          (email (plist-get contact :email)))
      (kill-new email)))
 
+(defun consult-mu-contacts-embark-get-alternative (cand)
+  "Embark function for copying contact's email."
+  (let* ((contact (get-text-property 0 :contact cand))
+         (name (plist-get contact :name)))
+     (consult-mu-contacts name)))
+
 (defun consult-mu-contacts-embark-compose (cand)
   "Embark function for `consult-mu-contacts--compose-to'."
   (let* ((contact (get-text-property 0 :contact cand)))
@@ -58,6 +64,7 @@
   "s" #'consult-mu-contacts-embark-search-messages
   "i" #'consult-mu-contacts-embark-insert-email
   "w" #'consult-mu-contacts-embark-kill-email
+  "a" #'consult-mu-contacts-embark-get-alternative
   )
 
 
