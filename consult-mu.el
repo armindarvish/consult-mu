@@ -511,8 +511,8 @@ This function converts each character in FLAG to an expanded string of the flag 
 (defun consult-mu--message-emails-string-to-list (string)
  "Converts comma-separated STRING containing email addresses to list of emails"
  (when (stringp string)
-  (mapcar #'consult-mu--message-extract-email-from-string
-          (split-string string ",\\|;\\|\t" t "\n"))
+  (remove '(" " "\s" "\t") (mapcar #'consult-mu--message-extract-email-from-string
+          (split-string string ",\\|;\\|\t" t)))
   ))
 
 (defun consult-mu--message-get-header-field (&optional field)
@@ -528,7 +528,7 @@ This function converts each character in FLAG to an expanded string of the flag 
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
       (let* ((match (re-search-forward (concat "^" field ": ") nil t))
-            (str (if match (buffer-substring-no-properties (point) (point-at-eol)))))
+            (str (if match (string-trim (buffer-substring-no-properties (point) (point-at-eol))))))
         (if (string-empty-p str) nil str))))))
 
 (defun consult-mu--headers-append-handler (msglst)

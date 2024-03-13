@@ -378,7 +378,9 @@ By default it is set to name. But can be any of the following keywords:
 For example if =consult-mu-contacts-group-by= is set to =:domain= then the domain of the email address is used to group contacts. This is useful for example if you are looking for all emails from a specific company!
 
 ***** =consult-mu-contacts-action= 
-  This variable stores the function that is called when a contact is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu-contacts--list-messages-action= which searches for all the messages from that contact by calling =consult-mu=.
+This variable stores the function that is called when a contact is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu-contacts--list-messages-action= which searches for all the messages from that contact by calling =consult-mu=. You can also set this action to other functions such =consult-mu-contacts--insert-email-action= or =consult-mu-contacts--copy-email-action= for inserting or copying the email from contact.
+
+Note that the default action for =consult-mu-contacts-embark= is inserting the email. This is useful for quickly adding contacts when composing messages. You cna also use =embark-collect= or =embark-export= to select multiple contacts and act on all of them (e.g. insert all in "To:" field in a compose buffer).
 
 ***** =consult-mu-contacts-ignore-list=
   This is a list of rgexp that gets ignored when searching contacts.
