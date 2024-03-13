@@ -504,7 +504,8 @@ This function converts each character in FLAG to an expanded string of the flag 
 (defun consult-mu--message-extract-email-from-string (string)
   "Finds and returns the first email address in the STRING"
   (string-match "[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+" string)
-  (match-string 0 string))
+  (match-string 0 string)
+  )
 
 (defun consult-mu--message-emails-string-to-list (string)
  "Converts comma-separated STRING containing email addresses to list of emails"
