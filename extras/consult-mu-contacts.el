@@ -41,6 +41,8 @@ By default it is bound to `consult-mu-contacts--list-messages-action'.
 "
   :group 'consult-mu
   :type '(choice (function :tag "(Default) Show Messages from Contact" #'consult-mu-contacts--list-messages-action)
+                 (function :tag "Insert Email" #'consult-mu-contacts--insert-email-action)
+                 (function :tag "Copy Email to Kill Ring" #'consult-mu-contacts--copy-email-action)
                  (function :tag "Custom Function")))
 
 (defcustom consult-mu-contacts-ignore-list (list)
@@ -93,6 +95,46 @@ To use this as the default action for consult-mu-contacts, set `consult-mu-conta
     (consult-mu-contacts--list-messages contact)
     )
 
+)
+
+(defun consult-mu-contacts--insert-email (contact)
+  "insert email of CONTACT at point.
+
+This is useful for inserting email when composing an email to contact."
+  (let* ((email (plist-get contact :email)))
+      (insert (concat email "; ")))
+)
+
+(defun consult-mu-contacts--insert-email-action (cand)
+  "inserts the email from contact candidate, CAND.
+
+This is a wrapper function around `consult-mu-contacts--insert-email'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--insert-email'.
+
+To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--insert-email-action."
+  (let* ((info (cdr cand))
+         (contact (plist-get info :contact))
+         )
+    (consult-mu-contacts--insert-email contact)
+    )
+)
+
+(defun consult-mu-contacts--copy-email (contact)
+  "copy email of CONTACT to kill ring."
+  (let* ((email (plist-get contact :email)))
+      (kill-new email))
+)
+
+(defun consult-mu-contacts--copy-email-action (cand)
+  "Copies the email from contact candidate, CAND, to kill ring.
+
+This is a wrapper function around `consult-mu-contacts--copy-email'. It parses CAND to extract relevant CONTACT plist and other information and passes them to `consult-mu-contacts--copy-email'.
+
+To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--copy-email-action."
+  (let* ((info (cdr cand))
+         (contact (plist-get info :contact))
+         )
+    (consult-mu-contacts--copy-email contact)
+    )
 )
 
 (defun consult-mu-contacts--compose-to (contact)
