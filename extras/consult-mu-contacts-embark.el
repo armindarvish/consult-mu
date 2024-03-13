@@ -19,6 +19,17 @@
 (require 'consult-mu)
 (require 'consult-mu-embark)
 
+(defun consult-mu-contacts-embark-insert-email (cand)
+  "Embark function for inserting contact's email."
+  (let* ((contact (get-text-property 0 :contact cand))
+         (email (plist-get contact :email)))
+     (insert (concat email "; "))))
+
+(defun consult-mu-contacts-embark-kill-save-email (cand)
+  "Embark function for inserting contact's email."
+  (let* ((contact (get-text-property 0 :contact cand))
+         (email (plist-get contact :email)))
+     (kill-new email)))
 
 (defun consult-mu-contacts-embark-compose (cand)
   "Embark function for `consult-mu-contacts--compose-to'."
@@ -45,7 +56,10 @@
   :parent consult-mu-embark-general-actions-map
   "c" #'consult-mu-contacts-embark-compose
   "s" #'consult-mu-contacts-embark-search-messages
+  "i" #'consult-mu-contacts-embark-insert-email
+  "w" #'consult-mu-contacts-embark-kill-save-email
   )
+
 
 (add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
 

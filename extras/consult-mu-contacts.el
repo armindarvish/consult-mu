@@ -47,7 +47,6 @@ By default it is bound to `consult-mu-contacts--list-messages-action'.
   "List of Regexps to ignore when searching contacts.
 
 This is useful to filter certain addreses from contacts. For example you can remove no-reply adresses by setting this variable to '((“no-reply@example.com”)).
-By default it is inherited from `message-prune-recipient-rules'.
 "
   :group 'consult-mu
   :type '(repeat :tag "Regexp List" regexp))
@@ -59,7 +58,7 @@ When non-nil, `consult-mu-contacts' performs case *insensitive* match with `cons
 By default it is inherited from `case-fold-search'.
 "
   :group 'consult-mu
-  :type '(repeat :tag "Regexp List" regexp))
+  :type 'boolean)
 
 ;;; Other Variables
 
@@ -146,13 +145,14 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
   (let ((add (list)))
     (pcase major-mode
       ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
-       (mapcar (lambda (item) (concat "#" (consult-mu--message-extract-email-from-string item)))
+       (mapcar (lambda (item)
+                 (concat "#" (consult-mu--message-extract-email-from-string item)))
                (append add
-                       (string-split (consult-mu--message-get-header-field "from") ",\\|;")
-                       (string-split (consult-mu--message-get-header-field "to") ",\\|;")
-                       (string-split (consult-mu--message-get-header-field "cc") ",\\|;")
-                       (string-split (consult-mu--message-get-header-field "bcc") ",\\|;")
-                       (string-split (consult-mu--message-get-header-field "reply-to") ",\\|;")
+                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "from"))
+                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "to"))
+                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "cc"))
+                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "bcc"))
+                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "reply-to"))
                        )
                ))
       (_
