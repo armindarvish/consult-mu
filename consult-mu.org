@@ -3071,8 +3071,15 @@ This section includes additional useful embark actions as well as possible keyma
 (defun consult-mu-contacts-embark-get-alternative (cand)
   "Embark function for copying contact's email."
   (let* ((contact (get-text-property 0 :contact cand))
-         (name (plist-get contact :name)))
-     (consult-mu-contacts name)))
+         (name (string-trim (plist-get contact :name)))
+         (email (plist-get contact :email))
+         (user (string-trim (replace-regexp-in-string "@.*" "" email))))
+     (consult-mu-contacts (cond
+                           ((not (string-empty-p name))
+                            name)
+                           ((not (string-empty-p user))
+                            user)
+                           ((t ""))))))
 
 (defun consult-mu-contacts-embark-compose (cand)
   "Embark function for `consult-mu-contacts--compose-to'."
