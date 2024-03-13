@@ -46,8 +46,8 @@
   "Run `consult-mu-contacts-action' on the candidate."
   (let* ((contact (get-text-property 0 :contact cand))
          (query (get-text-property 0 :query cand))
-         (newcand (cons cand `(:msg ,msg :query ,query))))
-    (funcall consult-mu-contacts-action newcand))
+         (newcand (cons cand `(:contact ,contact :query ,query))))
+    (funcall #'consult-mu-contacts--insert-email-action newcand))
   )
 
 ;;; Define Embark Keymaps
