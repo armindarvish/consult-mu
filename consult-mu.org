@@ -2593,7 +2593,6 @@ By default it is bound to `consult-mu-contacts--list-messages-action'.
   "List of Regexps to ignore when searching contacts.
 
 This is useful to filter certain addreses from contacts. For example you can remove no-reply adresses by setting this variable to '((“no-reply@example.com”)).
-By default it is inherited from `message-prune-recipient-rules'.
 "
   :group 'consult-mu
   :type '(repeat :tag "Regexp List" regexp))
@@ -2605,7 +2604,7 @@ When non-nil, `consult-mu-contacts' performs case *insensitive* match with `cons
 By default it is inherited from `case-fold-search'.
 "
   :group 'consult-mu
-  :type '(repeat :tag "Regexp List" regexp))
+  :type 'boolean)
 
 
 #+end_src
