@@ -503,18 +503,21 @@ This function converts each character in FLAG to an expanded string of the flag 
 
 (defun consult-mu--message-extract-email-from-string (string)
   "Finds and returns the first email address in the STRING"
-  (string-match "[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+" string)
-  (match-string 0 string)
-  )
+  (when (stringp string)
+    (string-match "[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+" string)
+    (match-string 0 string)
+  ))
 
 (defun consult-mu--message-emails-string-to-list (string)
  "Converts comma-separated STRING containing email addresses to list of emails"
+ (when (stringp string)
   (mapcar #'consult-mu--message-extract-email-from-string
-          (split-string string ",\\|;\\|\t"))
-  )
+          (split-string string ",\\|;\\|\t" t "\n"))
+  ))
 
 (defun consult-mu--message-get-header-field (&optional field)
   "Retrive FIELD header from the message/mail in the current buffer"
+  (save-excursion
   (when (or (derived-mode-p 'message-mode)
             (derived-mode-p 'mu4e-view-mode)
             (derived-mode-p 'org-msg-edit-mode)
@@ -524,8 +527,9 @@ This function converts each character in FLAG to an expanded string of the flag 
                       :prompt "Header Field: ")))))
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
-      (re-search-forward (concat "^" field ": ") nil t)
-      (buffer-substring-no-properties (point) (point-at-eol)))))
+      (let* ((match (re-search-forward (concat "^" field ": ") nil t))
+            (str (if match (buffer-substring-no-properties (point) (point-at-eol)))))
+        (if (string-empty-p str) nil str))))))
 
 (defun consult-mu--headers-append-handler (msglst)
   "Overrides `mu4e~headers-append-handler' for `consult-mu'.
