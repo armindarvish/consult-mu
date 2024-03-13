@@ -43,6 +43,24 @@ By default it is bound to `consult-mu-contacts--list-messages-action'.
   :type '(choice (function :tag "(Default) Show Messages from Contact" #'consult-mu-contacts--list-messages-action)
                  (function :tag "Custom Function")))
 
+(defcustom consult-mu-contacts-ignore-list (list)
+  "List of Regexps to ignore when searching contacts.
+
+This is useful to filter certain addreses from contacts. For example you can remove no-reply adresses by setting this variable to '((“no-reply@example.com”)).
+By default it is inherited from `message-prune-recipient-rules'.
+"
+  :group 'consult-mu
+  :type '(repeat :tag "Regexp List" regexp))
+
+(defcustom consult-mu-contacts-ignore-case-fold-search case-fold-search
+  "Whether to ignore case when matching against `consult-mu-contacts-ignore-list'.
+When non-nil, `consult-mu-contacts' performs case *insensitive* match with `consult-mu-contacts-ignore-list' and removes matches from candidates.
+
+By default it is inherited from `case-fold-search'.
+"
+  :group 'consult-mu
+  :type '(repeat :tag "Regexp List" regexp))
+
 ;;; Other Variables
 
 (defvar consult-mu-contacts-category 'consult-mu-contacts
@@ -181,6 +199,24 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
       (cons (or name email) info)
       )))
 
+(defun consult-mu-contatcs--predicate (cand)
+"Predicate function for `consult-mu-contacs' minibuffer candidates.
+
+This is passed as Predicate to `consult--read' on candidates and is used to remove contacts matching `consult-mu-contacts-ignore-list' from the list of candidtaes.
+
+note that `consult-mu-contacts-ignore-case-fold-search' is used to define case (in)sensitivity as well."
+
+(let* ((contact (plist-get (cdr cand) :contact))
+       (email (plist-get contact :email))
+       (name (plist-get contact :name))
+       (case-fold-search consult-mu-contacts-ignore-case-fold-search))
+  (if (seq-empty-p (seq-filter (lambda (reg) (or (string-match-p reg email)
+                                            (string-match-p reg name))
+                                                 ) consult-mu-contacts-ignore-list))
+          t
+      nil)
+      ))
+
 (defun consult-mu-contacts--state ()
   "State function for `consult-mu-contacts' candidates.
 This is passed as STATE to `consult--read' and is used to preview or do other actions on the candidate."
@@ -283,6 +319,7 @@ will retrieve the message as the example above, then narrows down the completion
    :history '(:input consult-mu-contacts--history)
    :category 'consult-mu-contacts
    :preview-key consult-mu-preview-key
+   :predicate #'consult-mu-contatcs--predicate
    :sort t))
 
 (defun consult-mu-contacts (&optional initial noaction)

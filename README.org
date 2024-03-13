@@ -138,9 +138,11 @@ Here is a customization that gives you the full feature experience including uti
   (require 'consult-mu-contacts)
   (require 'consult-mu-contacts-embark)
   ;; change the prefiew key for compose so you don't open a preview of every file when selecting files to attach
-  (setq 'consult-mu-compose-preview-key "M-o")
+  (setq consult-mu-compose-preview-key "M-o")
   ;; pick a key to bind to consult-mu-compose-attach in embark-file-map
-  (setq 'consult-mu-embark-attach-file-key "C-a")
+  (setq consult-mu-embark-attach-file-key "C-a")
+  (setq consult-mu-contacts-ignore-list '("^.*no.*reply.*"))
+  (setq consult-mu-contacts-ignore-case-fold-search t)
   (consult-mu-compose-embark-bind-attach-file-key)
   ;; choose if you want to use dired for attaching files (choice of 'always, 'in-dired, or nil)
   (customize-save-variable 'consult-mu-compose-use-dired-attachment 'in-dired)
@@ -377,6 +379,17 @@ For example if =consult-mu-contacts-group-by= is set to =:domain= then the domai
 
 ***** =consult-mu-contacts-action= 
   This variable stores the function that is called when a contact is selected (i.e. =RET= is pressed in the minibuffer). By default it is bound to =consult-mu-contacts--list-messages-action= which searches for all the messages from that contact by calling =consult-mu=.
+
+***** =consult-mu-contacts-ignore-list=
+  This is a list of rgexp that gets ignored when searching contacts.
+  This is useful to filter certain invalid addreses (e.g. "no-reply" addresses from contacts). For example you can remove no-reply adresses by setting this variable as follows;
+  #+begin_src emacs-lisp
+(setq consult-mu-contacts-ignore-list '("^.*no.*reply.*$"))
+
+  #+end_src
+
+***** =consult-mu-contacts-ignore-case-fold-search=
+This variable defines whether =consult-mu-contacts= uses case insensitive search when matching against  =consult-mu-contacts-ignore-list= (see above). if you set this to =t=, it will preform case *in*sensitive match.
 
 * Features and Demos
 For a detailed description of why this package is useful, and some useful screenshosts showing work flows, you can read my blog post here:
