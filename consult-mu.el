@@ -586,15 +586,15 @@ From mu4e docs:
 
 Clear the headers buffer and related data structures.
 Optionally, show TEXT. "
-    (setq mu4e~headers-render-start (float-time)
-          mu4e~headers-hidden 0)
+  (setq mu4e~headers-render-start (float-time)
+        mu4e~headers-hidden 0)
+  (with-current-buffer "*consult-mu-headers*"
     (let ((inhibit-read-only t))
-      (with-current-buffer "*consult-mu-headers*"
-        (mu4e--mark-clear)
-        (erase-buffer)
-        (when text
-          (goto-char (point-min))
-          (insert (propertize text 'face 'mu4e-system-face 'intangible t))))))
+      (mu4e--mark-clear)
+      (erase-buffer)
+      (when text
+        (goto-char (point-min))
+        (insert (propertize text 'face 'mu4e-system-face 'intangible t))))))
 
 (defun consult-mu--set-mu4e-search-sortfield (opts)
   "Dynamically sets the `mu4e-search-sort-field' based on user input.
@@ -728,65 +728,66 @@ If IGNORE-HISTORY is true, does *not* update the query history stack, `mu4e--sea
 
 If MSGID is non-nil, put the cursor on message with MSGID.
 "
-(consult-mu--execute-all-marks)
-(cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
+  (consult-mu--execute-all-marks)
+  (cl-letf* (((symbol-function #'mu4e~headers-append-handler) #'consult-mu--headers-append-handler))
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
            (view-buffer (get-buffer consult-mu-view-buffer-name))
-           (inhibit-read-only t)
            (expr (car (consult--command-split query)))
            (rewritten-expr (funcall mu4e-query-rewrite-function expr))
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
            (mu4e-headers-fields consult-mu-headers-fields)
            )
       (pcase type
-       (:dynamic )
-       (:async
-        (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
-       (_ ))
+        (:dynamic )
+        (:async
+         (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
+        (_ ))
 
 
       (with-current-buffer buf
         (save-excursion
-          (erase-buffer)
-          (mu4e-headers-mode)
-          (setq-local mu4e-view-buffer-name consult-mu-view-buffer-name)
-          (if view-buffer
-              (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
-          (unless ignore-history
-            ; save the old present query to the history list
-            (when mu4e--search-last-query
-              (mu4e--search-push-query mu4e--search-last-query 'past)))
-          (setq mu4e--search-last-query rewritten-expr)
-          (setq list-buffers-directory rewritten-expr)
-          (mu4e--modeline-update)
-          (run-hook-with-args 'mu4e-search-hook expr)
-          (consult-mu--headers-clear mu4e~search-message)
-          (setq mu4e~headers-search-start (float-time))
+          (let ((inhibit-read-only t))
 
-          (pcase-let* ((`(,arg . ,opts) (consult--command-split query))
-                       (mu4e-search-sort-field (consult-mu--set-mu4e-search-sortfield opts))
-                       (mu4e-search-sort-direction (consult-mu--set-mu4e-search-sort-direction opts))
-                       (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
-                       (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
-                       (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
-                       (mu4e-search-include-related (consult-mu--set-mu4e-skip-duplicates opts))
-                      )
-            (mu4e--server-find
-             rewritten-expr
-             mu4e-search-threads
-             mu4e-search-sort-field
-             mu4e-search-sort-direction
-             mu4e-search-results-limit
-             mu4e-search-skip-duplicates
-             mu4e-search-include-related))
-          (while (or (string-empty-p (buffer-substring (point-min) (point-max)))
-                     (equal (buffer-substring (point-min) (+ (point-min) (length mu4e~search-message))) mu4e~search-message)
-                     (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results)))
-                     )
-            (sleep-for 0.005)
-            )
-          )))))
+            (erase-buffer)
+            (mu4e-headers-mode)
+            (setq-local mu4e-view-buffer-name consult-mu-view-buffer-name)
+            (if view-buffer
+                (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
+            (unless ignore-history
+                                        ; save the old present query to the history list
+              (when mu4e--search-last-query
+                (mu4e--search-push-query mu4e--search-last-query 'past)))
+            (setq mu4e--search-last-query rewritten-expr)
+            (setq list-buffers-directory rewritten-expr)
+            (mu4e--modeline-update)
+            (run-hook-with-args 'mu4e-search-hook expr)
+            (consult-mu--headers-clear mu4e~search-message)
+            (setq mu4e~headers-search-start (float-time))
+
+            (pcase-let* ((`(,arg . ,opts) (consult--command-split query))
+                         (mu4e-search-sort-field (consult-mu--set-mu4e-search-sortfield opts))
+                         (mu4e-search-sort-direction (consult-mu--set-mu4e-search-sort-direction opts))
+                         (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
+                         (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
+                         (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
+                         (mu4e-search-include-related (consult-mu--set-mu4e-skip-duplicates opts))
+                         )
+              (mu4e--server-find
+               rewritten-expr
+               mu4e-search-threads
+               mu4e-search-sort-field
+               mu4e-search-sort-direction
+               mu4e-search-results-limit
+               mu4e-search-skip-duplicates
+               mu4e-search-include-related))
+            (while (or (string-empty-p (buffer-substring (point-min) (point-max)))
+                       (equal (buffer-substring (point-min) (+ (point-min) (length mu4e~search-message))) mu4e~search-message)
+                       (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results)))
+                       )
+              (sleep-for 0.005)
+              )
+            ))))))
 
 (defun consult-mu--execute-all-marks (&optional no-confirmation)
   "Execute the actions for all marked messages in `consult-mu-headers-buffer-name' buffer.
