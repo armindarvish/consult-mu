@@ -566,7 +566,6 @@ in the the message view affects `consult-mu-headers-buffer-name', as does markin
     (setq gnus-article-buffer (mu4e-get-view-buffer linked-headers-buffer t))
     (with-current-buffer gnus-article-buffer
       (let ((inhibit-read-only t))
-        (erase-buffer)
         (remove-overlays (point-min) (point-max) 'mu4e-overlay t)
         (erase-buffer)
         (insert-file-contents-literally
@@ -577,10 +576,7 @@ in the the message view affects `consult-mu-headers-buffer-name', as does markin
         (with-current-buffer linked-headers-buffer
           (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
         (run-hooks 'mu4e-view-rendered-hook)
-      )
-          (unless inhibit-read-only (setq-local inhibit-read-only t))
-)
-    ))
+      ))))
 
 (defun consult-mu--headers-clear (&optional text)
   "Overrides `mu4e~headers-clear' for `consult-mu'.
@@ -790,11 +786,7 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                      )
             (sleep-for 0.005)
             )
-          )
-        (unless inhibit-read-only (setq-local inhibit-read-only t))
-        )))
-
-  )
+          )))))
 
 (defun consult-mu--execute-all-marks (&optional no-confirmation)
   "Execute the actions for all marked messages in `consult-mu-headers-buffer-name' buffer.
