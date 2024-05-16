@@ -25,10 +25,8 @@
 ** Requirements
 #+begin_src emacs-lisp
 ;;; Requirements
-(eval-when-compile
 (require 'consult)
 (require 'mu4e)
-)
 #+end_src
 
 ** Define Group, Customs, Vars, etc.

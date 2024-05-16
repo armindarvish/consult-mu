@@ -15,10 +15,8 @@
 ;;; Code:
 
 ;;; Requirements
-(eval-when-compile
 (require 'consult)
 (require 'mu4e)
-)
 
 ;;; Group
 
