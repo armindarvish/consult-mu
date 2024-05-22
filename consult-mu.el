@@ -1591,4 +1591,4 @@ For example, the `consult-mu-default-command can be set to
 ;;; provide `consult-mu' module
 (provide 'consult-mu)
 
-;;; consult-mu ends here
+;;; consult-mu.el ends here

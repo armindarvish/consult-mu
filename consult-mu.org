@@ -1766,7 +1766,7 @@ For example, the `consult-mu-default-command can be set to
 #+end_src
 ** Footer
 #+begin_src emacs-lisp
-;;; consult-mu ends here
+;;; consult-mu.el ends here
 #+end_src
 
 * consult-mu-embark.el
