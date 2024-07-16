@@ -686,7 +686,7 @@ the `mu4e-search-results-limit' is set to 400.
   )
 
 
-(defun consult-mu--set-mu4e-skip-duplicates (opts)
+(defun consult-mu--set-mu4e-include-related (opts)
   "Dynamically sets the `mu4e-search-include-related' based on user input.
 Uses user input (i.e. from `consult-mu' command) to define the include-related property.
 
@@ -769,8 +769,9 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                          (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
                          (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
                          (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
-                         (mu4e-search-include-related (consult-mu--set-mu4e-skip-duplicates opts))
+                         (mu4e-search-include-related (consult-mu--set-mu4e-include-related opts))
                          )
+              (print mu4e-search-skip-duplicates)
               (mu4e--server-find
                rewritten-expr
                mu4e-search-threads
