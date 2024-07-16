@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "0.34"))
+;; Package-Requires: ((emacs "28.0") (consult "0.34") (mu4e "1.10.8"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 
@@ -15,10 +15,8 @@
 ;;; Code:
 
 ;;; Requirements
-(eval-when-compile
 (require 'consult)
 (require 'mu4e)
-)
 
 ;;; Group
 
@@ -688,7 +686,7 @@ the `mu4e-search-results-limit' is set to 400.
   )
 
 
-(defun consult-mu--set-mu4e-skip-duplicates (opts)
+(defun consult-mu--set-mu4e-include-related (opts)
   "Dynamically sets the `mu4e-search-include-related' based on user input.
 Uses user input (i.e. from `consult-mu' command) to define the include-related property.
 
@@ -771,7 +769,7 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                          (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
                          (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
                          (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
-                         (mu4e-search-include-related (consult-mu--set-mu4e-skip-duplicates opts))
+                         (mu4e-search-include-related (consult-mu--set-mu4e-include-related opts))
                          )
               (mu4e--server-find
                rewritten-expr
@@ -1593,4 +1591,4 @@ For example, the `consult-mu-default-command can be set to
 ;;; provide `consult-mu' module
 (provide 'consult-mu)
 
-;;; consult-mu ends here
+;;; consult-mu.el ends here
