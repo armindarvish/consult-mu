@@ -848,7 +848,6 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                          (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
                          (mu4e-search-include-related (consult-mu--set-mu4e-include-related opts))
                          )
-              (print mu4e-search-skip-duplicates)
               (mu4e--server-find
                rewritten-expr
                mu4e-search-threads
