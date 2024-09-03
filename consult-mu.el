@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "0.34") (mu4e "1.10.8"))
+;; Package-Requires: ((emacs "28.0") (consult "0.34") (mu4e "1.10.8") (compat "29.1.4.5"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 
@@ -522,12 +522,26 @@ This function converts each character in FLAG to an expanded string of the flag 
             (derived-mode-p'mu4e-compose-mode))
     (let ((field (or field
                      (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
-                      :prompt "Header Field: ")))))
+                                                        :prompt "Header Field: ")))))
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
-      (let* ((match (re-search-forward (concat "^" field ": ") nil t))
-            (str (if match (string-trim (buffer-substring-no-properties (point) (point-at-eol))))))
-        (if (string-empty-p str) nil str))))))
+      (let* ((match (re-search-forward field nil t))
+             (start (point))
+             (end nil)
+             (str nil))
+        (save-excursion
+          (while match
+            (setq end (line-end-position))
+            (goto-char (+ 1 end))
+            (let* ((next-start (point))
+                   (next-end (line-end-position))
+                   (next-line (buffer-substring-no-properties next-start next-end)))
+              (setq match (eq nil (string-match ":" next-line))))))
+        (if end
+            (progn
+              (setq str (string-replace "\n" " " (string-trim (buffer-substring-no-properties start end))))
+              (if (not (string-empty-p str)) str nil))
+          nil))))))
 
 (defun consult-mu--headers-append-handler (msglst)
   "Overrides `mu4e~headers-append-handler' for `consult-mu'.
