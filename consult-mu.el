@@ -525,7 +525,7 @@ This function converts each character in FLAG to an expanded string of the flag 
                                                         :prompt "Header Field: ")))))
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
-      (let* ((match (re-search-forward field nil t))
+      (let* ((match (re-search-forward (concat"^" field) nil t))
              (start (point))
              (end nil)
              (str nil))
