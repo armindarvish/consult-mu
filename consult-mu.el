@@ -7,11 +7,34 @@
 ;; Created: 2023
 ;; Version: 1.0
 ;; Package-Requires: ((emacs "28.0") (consult "0.34"))
-;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
+;; Homepage: https://github.com/armindarvish/consult-mu
+
+;; SPDX-License-Identifier: GPL-3.0-or-later
+
+;; This file is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published
+;; by the Free Software Foundation, either version 3 of the License,
+;; or (at your option) any later version.
+;;
+;; This file is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this file.  If not, see <https://www.gnu.org/licenses/>.
+
 
 ;;; Commentary:
-;;  This package requires mu4e version "1.10.8" or later
+
+;; This package provides an alternative interactive serach interface for
+;; mu and mu4e (see URL `https://djcbsoftware.nl/code/mu/mu4e.html').
+;; It uses a consult-based minibuffer completion for searching and
+;; selecting, and marking emails, as well as additional utilities for
+;; composing emails and more.
+
+;;  This package requires mu4e version "1.10.8" or later.
 
 ;;; Code:
 
