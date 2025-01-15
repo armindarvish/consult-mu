@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "0.34"))
+;; Package-Requires: ((emacs "28.0") (consult "20250114"))
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
 
@@ -755,11 +755,10 @@ If MSGID is non-nil, put the cursor on message with MSGID.
     (unless (mu4e-running-p) (mu4e--server-start))
     (let* ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t))
            (view-buffer (get-buffer consult-mu-view-buffer-name))
-           (expr (car (consult--command-split query)))
+           (expr (car (consult--command-split (substring-no-properties query))))
            (rewritten-expr (funcall mu4e-query-rewrite-function expr))
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
-           (mu4e-headers-fields consult-mu-headers-fields)
-           )
+           (mu4e-headers-fields consult-mu-headers-fields))
       (pcase type
         (:dynamic )
         (:async
@@ -770,7 +769,6 @@ If MSGID is non-nil, put the cursor on message with MSGID.
       (with-current-buffer buf
         (save-excursion
           (let ((inhibit-read-only t))
-
             (erase-buffer)
             (mu4e-headers-mode)
             (setq-local mu4e-view-buffer-name consult-mu-view-buffer-name)
@@ -1045,8 +1043,7 @@ See `consult-mu-group-by' for details of grouping options.
 
 This is passed as GROUP to `consult--read' on candidates and is used to group emails using `consult-mu--group-name'."
   (when-let ((name (consult-mu--group-name cand)))
-    (if transform (substring cand) name)
-    ))
+    (if transform (substring cand) name)))
 
 (defun consult-mu--view (msg noselect mark-as-read match-str)
   "Opens MSG in `consult-mu-headers' and `consult-mu-view'.
@@ -1162,6 +1159,15 @@ If WIDE-REPLY is non-nil use wide-reply (a.k.a. reply all) with `mu4e-compose-wi
        (consult-mu--forward msg)
        ))
 
+(defun consult-mu--get-split-style-character (&optional style)
+"Get the character for consult async split STYLE.
+
+STYLE defaults to `consult-async-split-style'."
+(let ((style (or style consult-async-split-style 'none)))
+  (or (plist-get (alist-get style consult-async-split-styles-alist) :initial)
+      (char-to-string (plist-get (alist-get style consult-async-split-styles-alist) :separator))
+      "")))
+
 (defun consult-mu--dynamic-format-candidate (cand highlight)
   "Formats minibuffer candidates for `consult-mu'.
 
@@ -1196,28 +1202,24 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
 
 INPUT is the user input. It is passed as QUERY to `consult-mu--update-headers', appends the result to `consult-mu-headers-buffer-name' and returns the collects list of found messages and returns it as minibuffer completion table.
 "
+
 (save-excursion
   (pcase-let* ((`(,arg . ,opts) (consult--command-split input)))
-      (consult-mu--update-headers input nil nil :dynamic)
-  (if (or (member "-g" opts)  (member "--group" opts))
+    (consult-mu--update-headers (substring-no-properties input) nil nil :dynamic)
+    (if (or (member "-g" opts)  (member "--group" opts))
         (cond
          ((member "-g" opts)
-          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) "nil")))
-          )
+          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) "nil"))))
          ((member "--group" opts)
-          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))
-          )
-         )
-      (setq consult-mu--override-group nil)
-      ))
+          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))))
+      (setq consult-mu--override-group nil)))
+
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
       (cl-loop until (eobp)
-               collect (let ((msg (ignore-errors (mu4e-message-at-point))))
-                         (consult-mu--dynamic-format-candidate `(,(buffer-substring (point) (point-at-eol)) (:msg ,(ignore-errors (mu4e-message-at-point)) :query ,input)) t))
-                 do (forward-line 1)))
-        )))
+               collect (consult-mu--dynamic-format-candidate (list (buffer-substring (point) (point-at-eol)) (list :msg (ignore-errors (mu4e-message-at-point)) :query input)) t)
+               do (forward-line 1))))))
 
 (defun consult-mu--dynamic-state ()
   "State function for consult-mu candidates.
@@ -1281,15 +1283,14 @@ For example:
 will retrieve the message as the example above, then narrows down the completion table to candidates that match \"accepted\".
 "
   (consult--read
-   (consult--dynamic-collection collection)
-   :prompt prompt
+   (consult--dynamic-collection #'consult-mu--dynamic-collection)
+   :prompt (or prompt "Select: ")
    :lookup (consult-mu--lookup)
    :state (funcall #'consult-mu--dynamic-state)
-   :initial (consult--async-split-initial initial)
+   :initial initial
    :group #'consult-mu--group
-   :add-history (append (list (consult--async-split-thingatpt 'symbol))
-                        consult-mu-saved-searches-dynamic
-                        )
+   :add-history (append (list (thing-at-point 'symbol))
+                        consult-mu-saved-searches-dynamic)
    :history '(:input consult-mu--history)
    :require-match t
    :category 'consult-mu-messages
@@ -1329,8 +1330,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
 "
   (interactive)
   (save-mark-and-excursion
-  (consult-mu--execute-all-marks)
-  )
+  (consult-mu--execute-all-marks))
   (let* ((sel
         (consult-mu--dynamic (concat "[" (propertize "consult-mu-dynamic" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
          ))
@@ -1423,26 +1423,14 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
          cand)
         ))))
 
-(defun consult-mu--async-transform (async builder)
-  "Adds annotation to minibuffer candiates for `consult-mu'.
+(defun consult-mu--async-transform (input)
+  "Add annotation to minibuffer candiates for `consult-mu'.
 
-Returns ASYNC function after formating results with `consult-mu--async-format-candidate'.
-BUILDER is the command line builder function (e.g. `consult-mu--async-builder')."
-  (let ((input))
-    `(lambda (action)
-       (cond
-        ((stringp action)
-         (setq input action)
-         (funcall ,async action)
-         )
-        ((consp action)
-         (funcall ,async (mapcar (lambda (string)
-                      (consult-mu--async-format-candidate string input t))
-                    action))
-         )
-         (t (funcall ,async action))
-         )
-         )))
+Format each candidates with `consult-gh--repo-format' and INPUT."
+  (lambda (cands)
+    (cl-loop for cand in cands
+             collect
+             (consult-mu--async-format-candidate cand input t))))
 
 (defun consult-mu--async-builder (input)
   "Build mu command line for searching messages by INPUT (e.g. `mu find INPUT)`."
@@ -1527,17 +1515,15 @@ For example:
 will retrieve the message as the example above, then narrows down the completion table to candidates that match \"accepted\".
 "
   (consult--read
-   (consult--async-command builder
-     (consult-mu--async-transform builder)
-     )
+   (consult--process-collection builder
+     :transform (consult--async-transform-by-input #'consult-mu--async-transform))
    :prompt prompt
    :lookup (consult-mu--lookup)
    :state (funcall #'consult-mu--async-state)
-   :initial (consult--async-split-initial initial)
+   :initial initial
    :group #'consult-mu--group
-   :add-history (append (list (consult--async-split-thingatpt 'symbol))
-                        consult-mu-saved-searches-async
-                        )
+   :add-history (append (list (thing-at-point 'symbol))
+                        consult-mu-saved-searches-async)
    :history '(:input consult-mu--history)
    :require-match t
    :category 'consult-mu-messages
@@ -1545,7 +1531,7 @@ will retrieve the message as the example above, then narrows down the completion
    :sort nil))
 
 (defun consult-mu-async (&optional initial noaction)
-    "Lists results of `mu find` Asynchronously.
+  "Lists results of `mu find` Asynchronously.
 
 This is an interactive wrapper function around `consult-mu--async'. It queries the user for a search term in the minibuffer, then fetches a list of messages for the entered search term as a minibuffer completion table for selection. The list of candidates in the completion table are dynamically updated as the user changes the entry.
 
@@ -1579,24 +1565,20 @@ Note that this is the async search directly using the commandline `mu` command a
 "
   (interactive)
   (save-mark-and-excursion
-  (consult-mu--execute-all-marks)
-  )
+    (consult-mu--execute-all-marks))
   (let* ((sel
-        (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial)
-         )
+          (consult-mu--async (concat "[" (propertize "consult-mu async" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--async-builder initial))
          (info (cdr sel))
          (msg (plist-get info :msg))
          (query (plist-get info :query)))
     (save-mark-and-excursion
-      (consult-mu--execute-all-marks)
-      )
-
+      (consult-mu--execute-all-marks))
     (if noaction
         sel
       (progn
         (consult-mu--update-headers query t msg :async))
-        (funcall consult-mu-action sel)
-        sel)))
+      (funcall consult-mu-action sel)
+      sel)))
 
 (defun consult-mu (&optional initial noaction)
 "Default consult-mu command.
@@ -1609,8 +1591,7 @@ For example, the `consult-mu-default-command can be set to
 "
 
   (interactive "P")
-  (funcall consult-mu-default-command initial noaction)
-)
+  (funcall consult-mu-default-command initial noaction))
 
 ;;; provide `consult-mu' module
 (provide 'consult-mu)
