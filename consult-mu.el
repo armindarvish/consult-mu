@@ -543,15 +543,30 @@ This function converts each character in FLAG to an expanded string of the flag 
   (when (or (derived-mode-p 'message-mode)
             (derived-mode-p 'mu4e-view-mode)
             (derived-mode-p 'org-msg-edit-mode)
-            (derived-mode-p'mu4e-compose-mode))
+            (derived-mode-p 'mu4e-compose-mode))
     (let ((field (or field
                      (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
                       :prompt "Header Field: ")))))
       (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
       (goto-char (point-min))
-      (let* ((match (re-search-forward (concat "^" field ": ") nil t))
-            (str (if match (string-trim (buffer-substring-no-properties (point) (point-at-eol))))))
-        (if (string-empty-p str) nil str))))))
+      (let* ((match (re-search-forward (concat"^" field) nil t))
+             (start (point))
+             (end nil)
+             (str nil))
+        (save-excursion
+          (while match
+            (setq end (line-end-position))
+            (goto-char (+ 1 end))
+            (let* ((next-start (point))
+                   (next-end (line-end-position))
+                   (next-line (buffer-substring-no-properties next-start next-end)))
+              (setq match (and (eq nil (string-match ":" next-line))
+                               (not (string-prefix-p "--" next-line)))))))
+        (if (and end (> end (+ start 2)))
+            (progn
+              (setq str (string-replace "\n" " " (string-trim (buffer-substring-no-properties start end))))
+              (if (not (string-empty-p str)) str nil))
+          nil))))))
 
 (defun consult-mu--headers-append-handler (msglst)
   "Overrides `mu4e~headers-append-handler' for `consult-mu'.
