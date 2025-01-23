@@ -1289,7 +1289,7 @@ If WIDE-REPLY is non-nil use wide-reply (a.k.a. reply all) with `mu4e-compose-wi
 
 STYLE defaults to `consult-async-split-style'."
 (let ((style (or style consult-async-split-style 'none)))
-  (or (plist-get (alist-get style consult-async-split-styles-alist) :initial)
+  (or (char-to-string (plist-get (alist-get style consult-async-split-styles-alist) :initial))
       (char-to-string (plist-get (alist-get style consult-async-split-styles-alist) :separator))
       "")))
 #+end_src
