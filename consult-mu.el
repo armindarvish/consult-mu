@@ -543,7 +543,7 @@ This function converts each character in FLAG to an expanded string of the flag 
   (when (or (derived-mode-p 'message-mode)
             (derived-mode-p 'mu4e-view-mode)
             (derived-mode-p 'org-msg-edit-mode)
-            (derived-mode-p'mu4e-compose-mode))
+            (derived-mode-p 'mu4e-compose-mode))
     (let ((field (or field
                      (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
                       :prompt "Header Field: ")))))

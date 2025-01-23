@@ -601,7 +601,7 @@ This function converts each character in FLAG to an expanded string of the flag 
   (when (or (derived-mode-p 'message-mode)
             (derived-mode-p 'mu4e-view-mode)
             (derived-mode-p 'org-msg-edit-mode)
-            (derived-mode-p'mu4e-compose-mode))
+            (derived-mode-p 'mu4e-compose-mode))
     (let ((field (or field
                      (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
                       :prompt "Header Field: ")))))
@@ -2533,7 +2533,7 @@ INITIAL is the initial input in the minibuffer."
 #+begin_src emacs-lisp
 ;;;  consult-mu-compose.el ends here
 #+end_src
-* consult-mu-compose-embark.rl
+* consult-mu-compose-embark.el
 :PROPERTIES:
 :header-args:emacs-lisp: :results none :mkdirp yes :link yes :tangle ./extras/consult-mu-compose-embark.el
 :END:
