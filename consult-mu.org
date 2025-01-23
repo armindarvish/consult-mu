@@ -84,8 +84,7 @@ Can be either a string, or a list of strings or expressions."
 This is normally passed to \"--maxnum\" in the command line or is defined by `mu4e-search-results-limit'. By default inherits from `mu4e-search-results-limit'. "
   :group 'consult-mu
   :type '(choice (const :tag "Unlimited" -1)
-                 (integer :tag "Limit"))
-  )
+                 (integer :tag "Limit")))
 
 (defcustom consult-mu-search-sort-field mu4e-search-sort-field
   "What field to sort results by?
@@ -97,8 +96,7 @@ By defualt inherits from `mu4e-search-sort-field'."
                 (const :tag "Priority" :prio)
                 (const :tag "From (Sender)" :from)
                 (const :tag "To (Recipients)" :to)
-                (const :tag "Mailing List" :list)
-                ))
+                (const :tag "Mailing List" :list)))
 
 (defcustom consult-mu-headers-fields mu4e-headers-fields
   "A list of header fields to show in the headers buffer.
@@ -118,8 +116,8 @@ regularly get such messages, you want to avoid fields with nil
 altogether."
   :group 'consult-mu
   :type `(repeat (cons (choice ,@(mapcar (lambda (h)
-                                           (list 'const :tag
-                                                 (plist-get (cdr h) :help)
+                                           (list 'const
+                                                 :tag (plist-get (cdr h) :help)
                                                  (car h)))
                                          mu4e-header-info))
                        (choice (integer :tag "width")
@@ -155,7 +153,7 @@ Thu 09 Nov 23  Title of the Email Limited to 50 Characters Onl...  example@domai
 "
   :group 'consult-mu
   :type '(choice (const :tag "Fromatted String" :format "%{%%d13%%s50%%f17%}")
-           (function :tag "Custom Function")))
+                 (function :tag "Custom Function")))
 
 (defcustom consult-mu-search-sort-direction mu4e-search-sort-direction
   "Direction to sort by a symbol.
@@ -270,8 +268,7 @@ This defines whether `consult-mu--reply-action' should reply to all or not."
   :group 'consult-mu
   :type '(choice (const :tag "Ask for confirmation" 'ask)
                  (const :tag "Do not reply to all" nil)
-                 (const :tag "Always reply to all" t)
-                 ))
+                 (const :tag "Always reply to all" t)))
 
 (defcustom consult-mu-action #'consult-mu--view-action
   "The function that is used when selecting a message.
@@ -286,8 +283,8 @@ By default it is bound to `consult-mu--view-action'."
   "Which command should `consult-mu' call."
   :group 'consult-mu
   :type '(choice (function :tag "(Default) Use Dynamic Collection (i.e. `consult-mu-dynamic')" #'consult-mu-dynamic)
-                (function :tag "Use Async Collection (i.e. `consult-mu-async')"  #'consult-mu-async)
-                (function :tag "Custom Function")))
+                 (function :tag "Use Async Collection (i.e. `consult-mu-async')"  #'consult-mu-async)
+                 (function :tag "Custom Function")))
 
 #+end_src
 
@@ -331,15 +328,14 @@ The idea is Taken from  https://github.com/seanfarley/counsel-mu.")
   "Highlight match face in `consult-mu''s view buffer.
 
 By default inherits from `consult-highlight-match'.
-This is used to highlight matches of search queries in the minibufffer completion list."
-  )
+This is used to highlight matches of search queries in the minibufffer completion list.")
 
 (defface consult-mu-preview-match-face
   `((t :inherit 'consult-preview-match))
   "Preview match face in `consult-mu''s preview buffers.
 
 By default inherits from `consult-preview-match'.
-This is used to highlight matches of search query terms in preview buffers (i.e. `consult-mu-view-buffer-name').")
+This is used to highlight matches of search query terms in preview buffers \(i.e. `consult-mu-view-buffer-name'\).")
 
 (defface consult-mu-default-face
   `((t :inherit 'default))
@@ -417,30 +413,26 @@ This section includes functions (utilities, mu4e hacks, ...).
            (beg (car m))
            (end (cadr m))
            (ov (make-overlay beg end))
-           (pulse-delay 0.075)
-           )
-      (pulse-momentary-highlight-overlay ov 'highlight))
-    ))
+           (pulse-delay 0.075))
+      (pulse-momentary-highlight-overlay ov 'highlight))))
 #+end_src
 ***** pulse-region
 #+begin_src emacs-lisp
 (defun consult-mu--pulse-region (beg end)
   "Finds and pulses region from BEG to END"
   (let ((ov (make-overlay beg end))
-        (pulse-delay 0.075)
-        )
-      (pulse-momentary-highlight-overlay ov 'highlight))
-    )
+        (pulse-delay 0.075))
+      (pulse-momentary-highlight-overlay ov 'highlight)))
 
 #+end_src
 ***** pulse-line
 #+begin_src emacs-lisp
 (defun consult-mu--pulse-line ()
-"Pulses line at point momentarily"
-(let* ((pulse-delay 0.055)
-      (ov (make-overlay (car (bounds-of-thing-at-point 'line)) (cdr (bounds-of-thing-at-point 'line)))))
-(pulse-momentary-highlight-overlay ov 'highlight))
-)
+  "Pulses line at point momentarily"
+  (let* ((pulse-delay 0.055)
+         (ov (make-overlay (car (bounds-of-thing-at-point 'line))
+                           (cdr (bounds-of-thing-at-point 'line)))))
+    (pulse-momentary-highlight-overlay ov 'highlight)))
 #+end_src
 
 **** formatting strings
@@ -469,10 +461,8 @@ It uses `consult-mu--set-string-width' and sets the width of the concatenate of 
   (let ((s (string-width string))
         (w (string-width prefix)))
     (if (> maxwidth w)
-    (consult-mu--set-string-width string (- maxwidth w) t)
-    string
-          )
-    ))
+        (consult-mu--set-string-width string (- maxwidth w) t)
+      string)))
 
 #+end_src
 ***** highlight match with text-properties
@@ -494,8 +484,7 @@ if IGNORE-CASE is non-nil.
         (while m
           (when (car m)
             (add-face-text-property (car m) (cadr m)
-                                     'consult-mu-highlight-match-face nil str)
-            )
+                                    'consult-mu-highlight-match-face nil str))
           (setq m (cddr m))))))
   str)
 #+end_src
@@ -515,11 +504,9 @@ This is used to highlight matches to use rqueries when viewing emails in consult
       (when-let* ((m (match-data))
                   (beg (car m))
                   (end (cadr m))
-                  (overlay (make-overlay beg end))
-                  )
+                  (overlay (make-overlay beg end)))
         (overlay-put overlay 'consult-mu-overlay t)
-        (overlay-put overlay 'face 'consult-mu-highlight-match-face)
-        )))))
+        (overlay-put overlay 'face 'consult-mu-highlight-match-face))))))
 
 (defun consult-mu-overlays-toggle (&optional buffer)
   "Toggles overlay highlights in consult-mu view/preview buffers."
@@ -530,9 +517,7 @@ This is used to highlight matches to use rqueries when viewing emails in consult
     (when (overlay-get o 'consult-mu-overlay)
       (if (and (overlay-get o 'face) (eq (overlay-get o 'face) 'consult-mu-highlight-match-face))
           (overlay-put o 'face nil)
-         (overlay-put o 'face 'consult-mu-highlight-match-face))
-      )
-))))
+         (overlay-put o 'face 'consult-mu-highlight-match-face)))))))
 #+end_src
 
 **** format date
@@ -546,8 +531,7 @@ Returns the date in the format Day-of-Week Month Day Year Time (e.g. Sat Nov 04 
     (format "%s %s %s"
             (substring string 0 10)
             (substring string -4 nil)
-            (substring string 11 -4)
-            )))
+            (substring string 11 -4))))
 #+end_src
 **** flags to string
 #+begin_src emacs-lisp
@@ -581,8 +565,7 @@ This function converts each character in FLAG to an expanded string of the flag 
   "Finds and returns the first email address in the STRING"
   (when (stringp string)
     (string-match "[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+" string)
-    (match-string 0 string)
-  ))
+    (match-string 0 string)))
 #+end_src
 **** split string of emails to list of emails
 #+begin_src emacs-lisp
@@ -590,8 +573,7 @@ This function converts each character in FLAG to an expanded string of the flag 
  "Converts comma-separated STRING containing email addresses to list of emails"
  (when (stringp string)
   (remove '(" " "\s" "\t") (mapcar #'consult-mu--message-extract-email-from-string
-          (split-string string ",\\|;\\|\t" t)))
-  ))
+          (split-string string ",\\|;\\|\t" t)))))
 #+end_src
 **** get header field from message
 #+begin_src emacs-lisp
@@ -662,8 +644,7 @@ in the the message view affects `consult-mu-headers-buffer-name', as does markin
         (mu4e-loading-mode 0)
         (with-current-buffer linked-headers-buffer
           (setq-local mu4e~headers-view-win (mu4e-display-buffer gnus-article-buffer nil)))
-        (run-hooks 'mu4e-view-rendered-hook)
-      ))))
+        (run-hooks 'mu4e-view-rendered-hook)))))
 
 #+end_src
 
@@ -730,8 +711,7 @@ chronologically (:date) by the newest message in the thread.
       ;; ((or "tags" "x")
       ;;  :tags)
       (_
-       consult-mu-search-sort-field)
-      )))
+       consult-mu-search-sort-field))))
 
 (defun consult-mu--set-mu4e-search-sort-direction (opts)
 "Dynamically sets the `mu4e-search-sort-direction' based on user input.
@@ -779,8 +759,7 @@ the `mu4e-search-results-limit' is set to 400.
     (cond
      ((member "-n" opts) (string-to-number (nth (+ (cl-position "-n" opts :test 'equal) 1) opts)))
      ((member "--maxnum" opts) (string-to-number (nth (+ (cl-position "--maxnum" opts :test 'equal) 1) opts)))
-     (t consult-mu-maxnum))
-  )
+     (t consult-mu-maxnum)))
 
 
 (defun consult-mu--set-mu4e-include-related (opts)
@@ -837,11 +816,10 @@ If MSGID is non-nil, put the cursor on message with MSGID.
            (maxnum (unless mu4e-search-full mu4e-search-results-limit))
            (mu4e-headers-fields consult-mu-headers-fields))
       (pcase type
-        (:dynamic )
+        (:dynamic)
         (:async
          (setq rewritten-expr (funcall mu4e-query-rewrite-function (concat "msgid:" (plist-get msg :message-id)))))
         (_ ))
-
 
       (with-current-buffer buf
         (save-excursion
@@ -868,8 +846,7 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                          (mu4e-search-skip-duplicates (consult-mu--set-mu4e-skip-duplicates opts))
                          (mu4e-search-results-limit (consult-mu--set-mu4e-results-limit opts))
                          (mu4e-search-threads (consult-mu--set-mu4e-threads opts))
-                         (mu4e-search-include-related (consult-mu--set-mu4e-include-related opts))
-                         )
+                         (mu4e-search-include-related (consult-mu--set-mu4e-include-related opts)))
               (mu4e--server-find
                rewritten-expr
                mu4e-search-threads
@@ -880,11 +857,8 @@ If MSGID is non-nil, put the cursor on message with MSGID.
                mu4e-search-include-related))
             (while (or (string-empty-p (buffer-substring (point-min) (point-max)))
                        (equal (buffer-substring (point-min) (+ (point-min) (length mu4e~search-message))) mu4e~search-message)
-                       (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results)))
-                       )
-              (sleep-for 0.005)
-              )
-            ))))))
+                       (not (or (equal (buffer-substring (- (point-max) (length mu4e~no-matches)) (point-max)) mu4e~no-matches) (equal (buffer-substring (- (point-max) (length mu4e~end-of-results)) (point-max)) mu4e~end-of-results))))
+              (sleep-for 0.005))))))))
 #+end_src
 
 **** execute-marks
@@ -906,10 +880,7 @@ This is similar to `mu4e-mark-execute-all' but, with buffer/window handling set 
              (pop-to-buffer buf)
              (unless (one-window-p) (delete-other-windows))
              (mu4e-mark-execute-all no-confirmation)
-             (quit-window))))
-        )
-      ))
-  )
+             (quit-window))))))))
 #+end_src
 
 **** goto-message by message-id
@@ -932,9 +903,7 @@ in `consult-mu-headers-buffer-name' buffer."
     (with-current-buffer buffer
       (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
       (mu4e-headers-goto-message-id msgid)
-      (mu4e-message-at-point)
-      )
-  )))
+      (mu4e-message-at-point)))))
 #+end_src
 **** make or retrive from/to/cc/bcc plist
 #+begin_src emacs-lisp
@@ -962,8 +931,7 @@ will be converted to
                ((string-match "^\\(?1:[a-zA-Z0-9\_\.\+\-]+@[a-zA-Z0-9\-]+\.[a-zA-Z0-9\-\.]+\\)" item)
                  (list :email (or (match-string 1 item) nil) :name nil))
                (t
-                (list :email (format "%s" item) :name nil))
-               )) list)))
+                (list :email (format "%s" item) :name nil)))) list)))
 #+end_src
 
 #+begin_src emacs-lisp
@@ -976,8 +944,7 @@ Looks at the contact plist (e.g. (:name \"John Doe\" :email \"john.doe@example.c
    ((stringp contact)
     contact)
    ((listp contact)
-   (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email) "")) contact ","))
-   ))
+   (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email) "")) contact ","))))
 #+end_src
 **** make custom headers info
 ***** make headers template
@@ -1058,8 +1025,8 @@ See `consult-mu-headers-template' for explanation of the format of STRING.
                                        (length (string-to-number (substring c 1 nil))))
                                    (if changed
                                        (propertize (if (> length 0) (consult-mu--set-string-width changed length) changed) 'face 'consult-mu-tags-face))))
-                            (_ nil)
-                            ) "  ")))
+                            (_ nil))
+                          "  ")))
 #+end_src
 *** consult-mu backend
 **** buffer handling
@@ -1074,8 +1041,7 @@ See `consult-mu-headers-template' for explanation of the format of STRING.
           (mu4e-mark-handle-when-leaving)
         (quit-window t)
         ;; clear the decks before going to the main-view
-        (mu4e--query-items-refresh 'reset-baseline)
-        )))))
+        (mu4e--query-items-refresh 'reset-baseline))))))
 #+end_src
 ***** quit view buffer
 #+begin_src emacs-lisp
@@ -1084,8 +1050,7 @@ See `consult-mu-headers-template' for explanation of the format of STRING.
   (when-let* ((buf (get-buffer consult-mu-view-buffer-name)))
     (with-current-buffer buf
       (if (eq major-mode 'mu4e-view-mode)
-          (mu4e-view-quit)
-        ))))
+          (mu4e-view-quit)))))
 #+end_src
 ***** quit main buffer
 #+begin_src emacs-lisp
@@ -1094,8 +1059,7 @@ See `consult-mu-headers-template' for explanation of the format of STRING.
   (when-let* ((buf (get-buffer mu4e-main-buffer-name)))
     (with-current-buffer buf
       (if (eq major-mode 'mu4e-main-mode)
-          (mu4e-quit)
-        ))))
+          (mu4e-quit)))))
 #+end_src
 **** minibuffer completion utilities
 ***** lookup
@@ -1107,10 +1071,8 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
   (lambda (sel cands &rest args)
     (let* ((info (cdr (assoc sel cands)))
            (msg  (plist-get info :msg))
-           (subject (plist-get msg :subject))
-           )
-      (cons subject info)
-      )))
+           (subject (plist-get msg :subject)))
+      (cons subject info))))
 #+end_src
 
 
@@ -1144,8 +1106,7 @@ See `consult-mu-group-by' for details of grouping options.
         (:size (file-size-human-readable (plist-get msg field)))
         (:flags (format "%s" (plist-get msg field)))
         (:tags (format "%s" (plist-get msg field)))
-        (_ (if (plist-get msg field) (format "%s" (plist-get msg field)) nil))
-        )))
+        (_ (if (plist-get msg field) (format "%s" (plist-get msg field)) nil)))))
 
 (defun consult-mu--group (cand transform)
 "Group function for `consult-mu' or `consult-mu-async' minibuffer candidates.
@@ -1176,8 +1137,7 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
         (goto-char (point-min))
         (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
         (unless noselect
-          (switch-to-buffer buf))
-        ))
+          (switch-to-buffer buf))))
 
     (consult-mu--view-msg msg consult-mu-view-buffer-name)
 
@@ -1186,8 +1146,7 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
           (progn
           (mu4e-headers-goto-message-id msgid)
           (if mark-as-read
-             (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N"))))
-      )
+             (mu4e--server-move (mu4e-message-field-at-point :docid) nil "+S-u-N")))))
 
     (when match-str
       (add-to-history 'search-ring match-str)
@@ -1199,7 +1158,6 @@ If MATCH-STR is non-nil, highlights the MATCH-STR in the view buffer.
     (unless noselect
       (when msg
         (select-window (get-buffer-window consult-mu-view-buffer-name))))
-
     consult-mu-view-buffer-name))
 
 
@@ -1213,11 +1171,9 @@ To use this as the default action for consult-mu, set `consult-mu-default-action
   (let* ((info (cdr cand))
          (msg (plist-get info :msg))
          (query (plist-get info :query))
-         (match-str (car (consult--command-split query)))
-         )
+         (match-str (car (consult--command-split query))))
     (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
-    (consult-mu-overlays-toggle consult-mu-view-buffer-name)
-    ))
+    (consult-mu-overlays-toggle consult-mu-view-buffer-name)))
 #+end_src
 
 ****** reply to message
@@ -1232,17 +1188,14 @@ If WIDE-REPLY is non-nil use wide-reply (a.k.a. reply all) with `mu4e-compose-wi
     (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
       (with-current-buffer buf
         (goto-char (point-min))
-        (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
-        ))
+        (setq mu4e-view-buffer-name consult-mu-view-buffer-name)))
 
 
     (with-current-buffer consult-mu-headers-buffer-name
       (mu4e-headers-goto-message-id msgid)
       (if (not wide-reply)
           (mu4e-compose-reply)
-        (mu4e-compose-wide-reply)
-      )
-      )))
+        (mu4e-compose-wide-reply)))))
 
 (defun consult-mu--reply-action (cand &optional wide-reply)
   (let* ((info (cdr cand))
@@ -1251,10 +1204,8 @@ If WIDE-REPLY is non-nil use wide-reply (a.k.a. reply all) with `mu4e-compose-wi
                          (pcase consult-mu-use-wide-reply
                            ('ask (y-or-n-p "reply all?"))
                            ('nil nil)
-                           ('t t)
-                           ))))
-       (consult-mu--reply msg wide-reply)
-))
+                           ('t t)))))
+       (consult-mu--reply msg wide-reply)))
 #+end_src
 
 ****** forward a message
@@ -1265,21 +1216,15 @@ If WIDE-REPLY is non-nil use wide-reply (a.k.a. reply all) with `mu4e-compose-wi
     (when-let ((buf (mu4e-get-headers-buffer consult-mu-headers-buffer-name t)))
       (with-current-buffer buf
         (goto-char (point-min))
-        (setq mu4e-view-buffer-name consult-mu-view-buffer-name)
-        ))
-
-
+        (setq mu4e-view-buffer-name consult-mu-view-buffer-name)))
     (with-current-buffer consult-mu-headers-buffer-name
       (mu4e-headers-goto-message-id msgid)
-      (mu4e-compose-forward)
-      )
-      ))
+      (mu4e-compose-forward))))
 
 (defun consult-mu--forward-action (cand)
   (let* ((info (cdr cand))
          (msg (plist-get info :msg)))
-       (consult-mu--forward msg)
-       ))
+       (consult-mu--forward msg)))
 #+end_src
 
 **** get consult split style character
@@ -1311,20 +1256,18 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
          (match-str (if (stringp query) (consult--split-escaped (car (consult--command-split query))) nil))
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
-                 (consult-mu--expand-headers-template msg headers-template)
-                  string)
-         )
-         (str (propertize str :msg msg :query query :type :dynamic))
-         )
-         (if (and consult-mu-highlight-matches highlight)
-                     (cond
-                      ((listp match-str)
-                       (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
-                      ((stringp match-str)
-                       (setq str (consult-mu--highlight-match match-str str t))))
-                   str)
-(when msg
-(cons str (list :msg msg :query query :type :dynamic)))))
+                  (consult-mu--expand-headers-template msg headers-template)
+                string))
+         (str (propertize str :msg msg :query query :type :dynamic)))
+    (if (and consult-mu-highlight-matches highlight)
+        (cond
+         ((listp match-str)
+          (mapcar (lambda (match) (setq str (consult-mu--highlight-match match str t))) match-str))
+         ((stringp match-str)
+          (setq str (consult-mu--highlight-match match-str str t))))
+      str)
+    (when msg
+      (cons str (list :msg msg :query query :type :dynamic)))))
 #+end_src
 
 ***** dynamic collection
@@ -1335,23 +1278,23 @@ if HIGHLIGHT is non-nil, it is highlighted with `consult-mu-highlight-match-face
 INPUT is the user input. It is passed as QUERY to `consult-mu--update-headers', appends the result to `consult-mu-headers-buffer-name' and returns the collects list of found messages and returns it as minibuffer completion table.
 "
 
-(save-excursion
-  (pcase-let* ((`(,arg . ,opts) (consult--command-split input)))
-    (consult-mu--update-headers (substring-no-properties input) nil nil :dynamic)
-    (if (or (member "-g" opts)  (member "--group" opts))
-        (cond
-         ((member "-g" opts)
-          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) "nil"))))
-         ((member "--group" opts)
-          (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))))
-      (setq consult-mu--override-group nil)))
+  (save-excursion
+    (pcase-let* ((`(,arg . ,opts) (consult--command-split input)))
+      (consult-mu--update-headers (substring-no-properties input) nil nil :dynamic)
+      (if (or (member "-g" opts)  (member "--group" opts))
+          (cond
+           ((member "-g" opts)
+            (setq consult-mu--override-group (intern (or (nth (+ (cl-position "-g" opts :test 'equal) 1) opts) "nil"))))
+           ((member "--group" opts)
+            (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))))
+        (setq consult-mu--override-group nil)))
 
     (with-current-buffer consult-mu-headers-buffer-name
       (goto-char (point-min))
       (remove nil
-      (cl-loop until (eobp)
-               collect (consult-mu--dynamic-format-candidate (list (buffer-substring (point) (point-at-eol)) (list :msg (ignore-errors (mu4e-message-at-point)) :query input)) t)
-               do (forward-line 1))))))
+              (cl-loop until (eobp)
+                       collect (consult-mu--dynamic-format-candidate (list (buffer-substring (point) (point-at-eol)) (list :msg (ignore-errors (mu4e-message-at-point)) :query input)) t)
+                       do (forward-line 1))))))
 #+end_src
 ***** state/preview
 #+begin_src emacs-lisp
@@ -1374,18 +1317,14 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
                ;;(get-buffer-create consult-mu-view-buffer-name)
                (add-to-list 'consult-mu--view-buffers-list buffer)
                (funcall preview action
-                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
-                        )
+                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str))
                (with-current-buffer consult-mu-view-buffer-name
-                 (unless (one-window-p) (delete-other-windows))
-                 ))))
+                 (unless (one-window-p) (delete-other-windows))))))
         ('return
          (save-mark-and-excursion
-           (consult-mu--execute-all-marks)
-           )
+           (consult-mu--execute-all-marks))
          (setq consult-mu--override-group nil)
-         cand)
-        ))))
+         cand)))))
 
 #+end_src
 
@@ -1474,11 +1413,9 @@ For more details on consult--async functionalities, see `consult-grep' and the o
   (save-mark-and-excursion
   (consult-mu--execute-all-marks))
   (let* ((sel
-        (consult-mu--dynamic (concat "[" (propertize "consult-mu-dynamic" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)
-         ))
+        (consult-mu--dynamic (concat "[" (propertize "consult-mu-dynamic" 'face 'consult-mu-sender-face) "]" " Search For:  ") #'consult-mu--dynamic-collection initial)))
     (save-mark-and-excursion
-      (consult-mu--execute-all-marks)
-      )
+      (consult-mu--execute-all-marks))
     (if noaction
         sel
       (progn
@@ -1518,18 +1455,16 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
          (headers-template (consult-mu--headers-template))
          (str (if headers-template
-                 (consult-mu--expand-headers-template msg headers-template)
-                  (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
-                          (propertize (consult-mu--set-string-width
-                                       (format-time-string "%x" date) 10) 'face 'consult-mu-date-face)
-                          (propertize (consult-mu--set-string-width (consult-mu--contact-name-or-email sender) (floor (* (frame-width) 0.2)))  'face 'consult-mu-sender-face)
-                      (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.55))) 'face 'consult-mu-subject-face)
-                      (propertize (file-size-human-readable size) 'face 'consult-mu-size-face)
-                      (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
-                      (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face)
-                      )))
-         (str (propertize str :msg msg :query query :type :async))
-         )
+                  (consult-mu--expand-headers-template msg headers-template)
+                (format "%s\s\s%s\s\s%s\s\s%s\s\s%s"
+                        (propertize (consult-mu--set-string-width
+                                     (format-time-string "%x" date) 10) 'face 'consult-mu-date-face)
+                        (propertize (consult-mu--set-string-width (consult-mu--contact-name-or-email sender) (floor (* (frame-width) 0.2)))  'face 'consult-mu-sender-face)
+                        (propertize (consult-mu--set-string-width subject (floor (* (frame-width) 0.55))) 'face 'consult-mu-subject-face)
+                        (propertize (file-size-human-readable size) 'face 'consult-mu-size-face)
+                        (propertize (format "%s" flags) 'face 'consult-mu-flags-face)
+                        (propertize (if tags (format "%s" tags) nil) 'face 'consult-mu-tags-face))))
+         (str (propertize str :msg msg :query query :type :async)))
     (if (and consult-mu-highlight-matches highlight)
         (cond
          ((listp match-str)
@@ -1561,17 +1496,13 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
                          (buffer consult-mu-view-buffer-name))
                (add-to-list 'consult-mu--view-buffers-list buffer)
                (funcall preview action
-                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str)
-                        )
+                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str))
                (with-current-buffer consult-mu-view-buffer-name
-                 (unless (one-window-p) (delete-other-windows))
-                 ))))
+                 (unless (one-window-p) (delete-other-windows))))))
         ('return
          (save-mark-and-excursion
-           (consult-mu--execute-all-marks)
-           )
-         cand)
-        ))))
+           (consult-mu--execute-all-marks))
+         cand)))))
 
 #+end_src
 
@@ -1613,8 +1544,7 @@ Format each candidates with `consult-gh--repo-format' and INPUT."
          ((member "--group" flags)
           (setq consult-mu--override-group (intern (or (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) "nil")))
           (setq opts (remove "--group" (remove (nth (+ (cl-position "--group" opts :test 'equal) 1) opts) opts)))))
-      (setq consult-mu--override-group nil)
-      )
+      (setq consult-mu--override-group nil))
     (setq opts (append opts (list "--nocolor")))
     (setq opts (append opts (list "--fields" (format "i%sd%sf%st%ss%sz%sg%sx%sp%sc%sh%sl"
                                                      consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter consult-mu-delimiter))))
@@ -1637,11 +1567,8 @@ Format each candidates with `consult-gh--repo-format' and INPUT."
        (if (or (member "-z" flags) (member "--reverse" flags))
            (setq opts (remove "-z" (remove "--reverse" opts)))
          (setq opts (append opts (list "--reverse")))))
-      ('ascending
-       )
-      (_
-       )
-      )
+      ('ascending)
+      (_))
     (pcase-let* ((`(,re . ,hl) (funcall consult--regexp-compiler arg 'basic t)))
       (when re
         (cons (append cmd
@@ -1839,8 +1766,7 @@ This section includes additional useful embark actions as well as possible keyma
 (defcustom consult-mu-embark-noconfirm-before-execute nil
   "Should consult-mu-embark skip confirmation when executing marks?"
   :group 'consult-mu
-  :type 'boolean
-  )
+  :type 'boolean)
 
 ;;; Define Embark Action Functions
 (defun consult-mu-embark-default-action (cand)
@@ -1850,10 +1776,8 @@ This section includes additional useful embark actions as well as possible keyma
          (type (get-text-property 0 :type cand))
          (newcand (cons cand `(:msg ,msg :query ,query :type ,type))))
     (if (equal type :async)
-        (consult-mu--update-headers query t msg :async)
-      )
-    (funcall consult-mu-action newcand))
-  )
+        (consult-mu--update-headers query t msg :async))
+    (funcall consult-mu-action newcand)))
 
 
 
@@ -1861,33 +1785,27 @@ This section includes additional useful embark actions as well as possible keyma
   "Reply to message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
-         (type (get-text-property 0 :type cand))
-         )
+         (type (get-text-property 0 :type cand)))
     (if (equal type :async)
-        (consult-mu--update-headers query t msg :async)
-      )
+        (consult-mu--update-headers query t msg :async))
     (consult-mu--reply msg nil)))
 
 (defun consult-mu-embark-wide-reply (cand)
   "Reply all for message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
-         (type (get-text-property 0 :type cand))
-         )
+         (type (get-text-property 0 :type cand)))
     (if (equal type :async)
-        (consult-mu--update-headers query t msg :async)
-      )
+        (consult-mu--update-headers query t msg :async))
     (consult-mu--reply msg )))
 
 (defun consult-mu-embark-forward (cand)
   "Forward the message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
-         (type (get-text-property 0 :type cand))
-         )
+         (type (get-text-property 0 :type cand)))
     (if (equal type :async)
-        (consult-mu--update-headers query t msg :async)
-      )
+        (consult-mu--update-headers query t msg :async))
     (consult-mu--forward msg)))
 
 (defun consult-mu-embark-kill-message-field (cand)
@@ -1896,25 +1814,19 @@ This section includes additional useful embark actions as well as possible keyma
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
          (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
-         (msg-id (plist-get msg :message-id))
-         )
+         (msg-id (plist-get msg :message-id)))
     (if (equal type :async)
-        (consult-mu--update-headers query t msg :async)
-      )
+        (consult-mu--update-headers query t msg :async))
     (with-current-buffer consult-mu-headers-buffer-name
       (unless (equal (mu4e-message-field-at-point :message-id) msg-id)
         (mu4e-headers-goto-message-id msg-id))
       (if (equal (mu4e-message-field-at-point :message-id) msg-id)
           (progn
-            (mu4e~headers-update-handler msg nil nil)
-            )
-        ))
+            (mu4e~headers-update-handler msg nil nil))))
 
     (with-current-buffer consult-mu-view-buffer-name
       (kill-new (consult-mu--message-get-header-field))
-      (consult-mu--pulse-region (point) (point-at-eol))
-      )
-    ))
+      (consult-mu--pulse-region (point) (point-at-eol)))))
 
 (defun consult-mu-embark-save-attachmnts (cand)
   "Save attachments of CAND."
@@ -1922,47 +1834,37 @@ This section includes additional useful embark actions as well as possible keyma
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
          (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
-         (msg-id (plist-get msg :message-id))
-         )
+         (msg-id (plist-get msg :message-id)))
 
     (if (equal type :async)
-        (consult-mu--update-headers query t msg :async)
-      )
+        (consult-mu--update-headers query t msg :async))
 
     (with-current-buffer consult-mu-headers-buffer-name
       (unless (equal (mu4e-message-field-at-point :message-id) msg-id)
         (mu4e-headers-goto-message-id msg-id))
       (if (equal (mu4e-message-field-at-point :message-id) msg-id)
           (progn
-            (mu4e~headers-update-handler msg nil nil)
-            )
-        ))
+            (mu4e~headers-update-handler msg nil nil))))
 
     (with-current-buffer consult-mu-view-buffer-name
       (goto-char (point-min))
       (re-search-forward "^\\(Attachment\\|Attachments\\): " nil t)
       (consult-mu--pulse-region (point) (point-at-eol))
-      (mu4e-view-save-attachments t)
-      )
-    ))
+      (mu4e-view-save-attachments t))))
 
 (defun consult-mu-embark-search-messages-from-contact (cand)
   "Search messages from the same sender as the message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (from (car (plist-get msg :from)))
-         (email (plist-get from :email))
-         )
-    (consult-mu (concat "from:" email)))
-  )
+         (email (plist-get from :email)))
+    (consult-mu (concat "from:" email))))
 
 (defun consult-mu-embark-search-messages-with-subject (cand)
   "Search all messages for the same subject as the message in CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          ;;(subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+" "" (plist-get msg :subject)))
-         (subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+\\|\\(\\[.*\\]\\)" "" (format "%s" (plist-get msg :subject))))
-         )
-    (consult-mu (concat "subject:" subject)))
-  )
+         (subject (replace-regexp-in-string ":\\|#\\|\\.\\|\\+\\|\\(\\[.*\\]\\)" "" (format "%s" (plist-get msg :subject)))))
+    (consult-mu (concat "subject:" subject))))
 
 ;; macro for defining functions for marks
 (defmacro consult-mu-embark--defun-mark-for (mark)
@@ -1974,8 +1876,7 @@ This section includes additional useful embark actions as well as possible keyma
               (let* ((msg (get-text-property 0 :msg cand))
                      (msgid (plist-get msg  :message-id))
                      (query (get-text-property 0 :query cand))
-                     (buf (get-buffer consult-mu-headers-buffer-name))
-                     )
+                     (buf (get-buffer consult-mu-headers-buffer-name)))
                 (if buf
                     (progn
                       (with-current-buffer buf
@@ -1998,12 +1899,7 @@ This section includes additional useful embark actions as well as possible keyma
                               (goto-char (point-min))
                               (mu4e-headers-goto-message-id msgid)
                               (if (equal (mu4e-message-field-at-point :message-id) msgid)
-                                  (mu4e-headers-mark-and-next ',mark)))))
-                        )
-                      )
-                  )
-
-                )))))
+                                  (mu4e-headers-mark-and-next ',mark)))))))))))))
 
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
@@ -2018,8 +1914,7 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 ;;; Define Embark Keymaps
 (defvar-keymap consult-mu-embark-general-actions-map
   :doc "Keymap for consult-mu-embark"
-  :parent embark-general-map
-  )
+  :parent embark-general-map)
 
 (add-to-list 'embark-keymap-alist '(consult-mu . consult-mu-embark-general-actions-map))
 
@@ -2033,8 +1928,7 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
   "?" #'consult-mu-embark-kill-message-field
   "c" #'consult-mu-embark-search-messages-from-contact
   "s" #'consult-mu-embark-search-messages-with-subject
-  "S" #'consult-mu-embark-save-attachmnts
-  )
+  "S" #'consult-mu-embark-save-attachmnts)
 
 (add-to-list 'embark-keymap-alist '(consult-mu-messages . consult-mu-embark-messages-actions-map))
 
@@ -2051,8 +1945,7 @@ This is useful for adding all `mu4e-marks' to embark key bindings under a submen
                    (key (cond ((consp key) (car key)) ((stringp key) key)))
                    (func (intern (concat "consult-mu-embark-mark-for-" (format "%s" (car mark)))))
                    (key (concat "m" key)))
-              (define-key consult-mu-embark-messages-actions-map key func)
-              ))
+              (define-key consult-mu-embark-messages-actions-map key func)))
           marks))
 
 ;; add all `mu4e-marks to embark keybindings. See `consult-mu-embark--add-keys-for-marks' above for more details
@@ -2139,8 +2032,7 @@ By default this is set to 'in-dired."
   :group 'consult-mu
   :type '(choice (const :tag "Only use Dired if inside Dired Buffer" 'in-dired)
                  (const :tag "Always use Dired" t)
-                 (const :tag "Never use Dired" nil)
-                 ))
+                 (const :tag "Never use Dired" nil)))
 
 (defcustom consult-mu-large-file-warning-threshold large-file-warning-threshold
   "Threshold for size of file to require confirmation for preview when selecting files to attach to emails.
@@ -2212,67 +2104,59 @@ INITIAL is the initial input in the minibuffer."
                                                        t)))
                                        (if confirm
                                            (funcall preview action
-                                                    (find-file-noselect (file-truename cand))
-                                                    ))))))
+                                                    (find-file-noselect (file-truename cand))))))))
                               ('return
-                               cand
-                               )
-                              )))
+                               cand))))
                  :preview-key consult-mu-compose-preview-key
                  :add-history (list mu4e-attachment-dir)
-                 :history 'consult-mu-compose-attach-history
-                 ))
+                 :history 'consult-mu-compose-attach-history))
 #+end_src
 
 **** read file to remove
 #+begin_src emacs-lisp
 (defun consult-mu-compose--read-file-remove (&optional initial)
-   "Select attached files to remove from email.
+  "Select attached files to remove from email.
 
 INITIAL is the initial input in the minibuffer."
 
   (if-let ((current-files (pcase major-mode
-                          ('org-msg-edit-mode
-                           (org-msg-get-prop "attachment"))
-                          ((or 'mu4e-compose-mode 'message-mode)
-                           (goto-char (point-max))
-                           (cl-loop while (re-search-backward "<#part.*filename=\"\\(?1:.*\\)\"[[:ascii:][:nonascii:]]*?/part>" nil t)
-                                    collect (match-string-no-properties 1)))
-                          (_
-                           (error "Not in a compose message buffer")
-                           nil))))
+                            ('org-msg-edit-mode
+                             (org-msg-get-prop "attachment"))
+                            ((or 'mu4e-compose-mode 'message-mode)
+                             (goto-char (point-max))
+                             (cl-loop while (re-search-backward "<#part.*filename=\"\\(?1:.*\\)\"[[:ascii:][:nonascii:]]*?/part>" nil t)
+                                      collect (match-string-no-properties 1)))
+                            (_
+                             (error "Not in a compose message buffer")
+                             nil))))
 
-        (consult--read current-files
-                       :prompt "Remove File:"
-                       :category 'file
-                       :state (lambda (action cand)
-                                (let ((preview (consult--buffer-preview)))
-                                  (pcase action
-                                    ('preview
-                                     (if cand
-                                         (when (not (file-directory-p cand))
-                                           (let* ((filename (file-truename cand))
-                                                  (filesize (float
-                                                             (file-attribute-size
-                                                              (file-attributes filename))))
-                                                  (confirm (if (and filename
-                                                                    (>= filesize consult-mu-large-file-warning-threshold))
-                                                               (yes-or-no-p (format "File is %s Bytes. Do you really want to preview it?" filesize))
-                                                             t)))
-                                             (if confirm
-                                                 (funcall preview action
-                                                          (find-file-noselect (file-truename cand))
-                                                          ))))))
-                                    ('return
-                                     cand
-                                     )
-                                    )))
-                       :preview-key consult-mu-compose-preview-key
-                       :initial initial
-                       )
-      (progn
-        (message "No files currently attached!")
-        nil)))
+      (consult--read current-files
+                     :prompt "Remove File:"
+                     :category 'file
+                     :state (lambda (action cand)
+                              (let ((preview (consult--buffer-preview)))
+                                (pcase action
+                                  ('preview
+                                   (if cand
+                                       (when (not (file-directory-p cand))
+                                         (let* ((filename (file-truename cand))
+                                                (filesize (float
+                                                           (file-attribute-size
+                                                            (file-attributes filename))))
+                                                (confirm (if (and filename
+                                                                  (>= filesize consult-mu-large-file-warning-threshold))
+                                                             (yes-or-no-p (format "File is %s Bytes. Do you really want to preview it?" filesize))
+                                                           t)))
+                                           (if confirm
+                                               (funcall preview action
+                                                        (find-file-noselect (file-truename cand))))))))
+                                  ('return
+                                   cand))))
+                     :preview-key consult-mu-compose-preview-key
+                     :initial initial)
+    (progn
+      (message "No files currently attached!")
+      nil)))
 
 #+end_src
 
@@ -2296,13 +2180,9 @@ INITIAL is the initial input in the minibuffer."
                                   ('preview
                                    (if (and cand (buffer-live-p cand))
                                        (funcall preview action
-                                                cand)
-                                     ))
+                                                cand)))
                                   ('return
-                                   cand
-                                   )
-                                  )))
-                     ))))
+                                   cand))))))))
 
 #+end_src
 **** get current compose buffers
@@ -2337,8 +2217,7 @@ INITIAL is the initial input in the minibuffer."
              (org-msg-set-prop "attachment" new-files))
            (goto-last-change 0)
            (org-reveal)
-           (consult-mu--pulse-line))
-         )
+           (consult-mu--pulse-line)))
         ((or 'mu4e-compose-mode 'message-mode)
          (save-excursion
            (dolist (file files)
@@ -2349,11 +2228,9 @@ INITIAL is the initial input in the minibuffer."
              (mail-add-attachment (file-truename file))
              (goto-last-change 0)
              (forward-line -2)
-             (consult-mu--pulse-line)
-             )))
+             (consult-mu--pulse-line))))
         (_
-         (error "%s is not a compose buffer" (current-buffer)))
-        ))))
+         (error "%s is not a compose buffer" (current-buffer)))))))
 #+end_src
 
 **** remove attachment
@@ -2375,22 +2252,21 @@ INITIAL is the initial input in the minibuffer."
                          (setq current-files (org-msg-get-prop "attachment"))
                          (goto-last-change 0)
                          (org-reveal)
-                         (consult-mu--pulse-line)
-                         )) files)
+                         (consult-mu--pulse-line)))
+                     files)
              (message "file(s) %s detached" (mapconcat 'identity removed-files ","))))
           ('mu4e-compose-mode
            (let ((removed-files (list)))
              (mapcar (lambda (file)
                        (goto-char (point-min))
                        (while (re-search-forward (format "<#part.*filename=\"%s\"[[:ascii:][:nonascii:]]*?/part>" file) nil t)
-    (replace-match "" nil nil)
+                         (replace-match "" nil nil)
                          (setq removed-files (append removed-files (list file)))
                          (goto-last-change 0)
                          (consult-mu--pulse-line)
-                         (whitespace-cleanup)
-                         )) files)
-             (message "file(s) %s detached" (mapconcat 'identity removed-files ", ")))
-           ))))))
+                         (whitespace-cleanup)))
+                     files)
+             (message "file(s) %s detached" (mapconcat 'identity removed-files ", ")))))))))
 #+end_src
 
 ** Frontend Interactive Commands
@@ -2404,20 +2280,19 @@ INITIAL is the initial input in the minibuffer."
                                                     (and (bound-and-true-p dired-mail-buffer) (buffer-live-p dired-mail-buffer) dired-mail-buffer))
                                                    (t
                                                     consult-mu-compose-current-draft-buffer)))
-        (mail-buffer (or mail-buffer
-                         (and (buffer-live-p consult-mu-compose-current-draft-buffer) consult-mu-compose-current-draft-buffer)
-                         nil))
+         (mail-buffer (or mail-buffer
+                          (and (buffer-live-p consult-mu-compose-current-draft-buffer) consult-mu-compose-current-draft-buffer)
+                          nil))
          (files (or files
-                   (if (and (derived-mode-p 'dired-mode) consult-mu-compose-use-dired-attachment)
-                       (delq nil
-                             (mapcar
-                              ;; don't attach directories
-                              (lambda (f) (if (file-directory-p f)
-                                              nil
-                                            f))
-                              (nreverse (dired-map-over-marks (dired-get-filename) nil))))
-                     (consult-mu-compose--read-file-attach files))))
-         )
+                    (if (and (derived-mode-p 'dired-mode) consult-mu-compose-use-dired-attachment)
+                        (delq nil
+                              (mapcar
+                               ;; don't attach directories
+                               (lambda (f) (if (file-directory-p f)
+                                               nil
+                                             f))
+                               (nreverse (dired-map-over-marks (dired-get-filename) nil))))
+                      (consult-mu-compose--read-file-attach files)))))
     (pcase major-mode
       ((or 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
        (setq mail-buffer (current-buffer))
@@ -2431,8 +2306,7 @@ INITIAL is the initial input in the minibuffer."
            (progn
              (split-window-sensibly)
              (with-current-buffer (dired files)
-               (setq-local dired-mail-buffer mail-buffer)
-               )))
+               (setq-local dired-mail-buffer mail-buffer))))
           ((and (file-directory-p files) (not (eq consult-mu-compose-use-dired-attachment 'always)))
            (progn
              (while (file-directory-p files)
@@ -2444,16 +2318,15 @@ INITIAL is the initial input in the minibuffer."
        (setq mail-buffer (or (and (bound-and-true-p dired-mail-buffer) (buffer-live-p dired-mail-buffer) dired-mail-buffer)
                              (consult-mu-compose-get-draft-buffer)
                              (if (version<= mu4e-mu-version "1.12")
-                                 (mu4e-compose 'new) (mu4e-compose-new))
-                             ))
+                                 (mu4e-compose 'new) (mu4e-compose-new))))
 
        (cond
         ((and mail-buffer (buffer-live-p mail-buffer)))
         ((stringp mail-buffer) (with-current-buffer (if (version<= mu4e-mu-version "1.12")
-                                 (mu4e-compose 'new) (mu4e-compose-new))
-                                (save-excursion (message-goto-subject)
-                                                (insert mail-buffer)
-                                                (rename-buffer mail-buffer t)))
+                                                        (mu4e-compose 'new) (mu4e-compose-new))
+                                 (save-excursion (message-goto-subject)
+                                                 (insert mail-buffer)
+                                                 (rename-buffer mail-buffer t)))
          (setq mail-buffer (get-buffer mail-buffer))))
 
        (if (and mail-buffer (buffer-live-p mail-buffer))
@@ -2473,22 +2346,20 @@ INITIAL is the initial input in the minibuffer."
                      (setq files (consult-mu-compose--read-file-attach files)))
                    (consult-mu-compose--attach-files (file-truename files) mail-buffer)))))
               ((listp files)
-               (consult-mu-compose--attach-files files mail-buffer)))
-             )))
+               (consult-mu-compose--attach-files files mail-buffer))))))
       (_
        (setq mail-buffer (or
                           consult-mu-compose-current-draft-buffer
                           (consult-mu-compose-get-draft-buffer)
-                             (if (version<= mu4e-mu-version "1.12")
-                                 (mu4e-compose 'new) (mu4e-compose-new))
-                             ))
+                          (if (version<= mu4e-mu-version "1.12")
+                              (mu4e-compose 'new) (mu4e-compose-new))))
        (cond
         ((and mail-buffer (buffer-live-p mail-buffer)))
         ((stringp mail-buffer) (with-current-buffer (if (version<= mu4e-mu-version "1.12")
-                                 (mu4e-compose 'new) (mu4e-compose-new))
-                                (save-excursion (message-goto-subject)
-                                                (insert mail-buffer)
-                                                (rename-buffer mail-buffer t)))
+                                                        (mu4e-compose 'new) (mu4e-compose-new))
+                                 (save-excursion (message-goto-subject)
+                                                 (insert mail-buffer)
+                                                 (rename-buffer mail-buffer t)))
          (setq mail-buffer (get-buffer mail-buffer))))
        (if (and mail-buffer (buffer-live-p mail-buffer))
            (progn
@@ -2507,21 +2378,17 @@ INITIAL is the initial input in the minibuffer."
                (progn
                  (while (file-directory-p files)
                    (setq files (consult-mu-compose--read-file-attach files)))
-                 (consult-mu-compose--attach-files (file-truename files) mail-buffer)
-                 )
-               )
+                 (consult-mu-compose--attach-files (file-truename files) mail-buffer)))
               ((listp files)
                (consult-mu-compose--attach-files files mail-buffer))))))))
   mail-buffer)
 
 (defun consult-mu-compose-detach (&optional file)
-"Remove FILE from email attachments interactively."
+  "Remove FILE from email attachments interactively."
   (interactive)
   (save-mark-and-excursion
-      (when-let (file (consult-mu-compose--read-file-remove))
-           (consult-mu-compose--remove-files file)
-           )
-      ))
+    (when-let (file (consult-mu-compose--read-file-remove))
+      (consult-mu-compose--remove-files file))))
 #+end_src
 
 ** Provide
@@ -2741,10 +2608,8 @@ By default it is inherited from `case-fold-search'.
 (defun consult-mu-contacts--list-messages (contact)
   "List messages from CONTACT using `consult-mu'."
   (let* ((consult-mu-maxnum nil)
-        (email (plist-get contact :email))
-        )
-      (consult-mu (format "contact:%s" email))
-))
+        (email (plist-get contact :email)))
+      (consult-mu (format "contact:%s" email))))
 
 (defun consult-mu-contacts--list-messages-action (cand)
   "Searches the messages from contact candidate, CAND.
@@ -2755,12 +2620,8 @@ To use this as the default action for consult-mu-contacts, set `consult-mu-conta
 
 
   (let* ((info (cdr cand))
-         (contact (plist-get info :contact))
-         )
-    (consult-mu-contacts--list-messages contact)
-    )
-
-)
+         (contact (plist-get info :contact)))
+    (consult-mu-contacts--list-messages contact)))
 #+end_src
 *** insert contact
 #+begin_src emacs-lisp
@@ -2769,8 +2630,7 @@ To use this as the default action for consult-mu-contacts, set `consult-mu-conta
 
 This is useful for inserting email when composing an email to contact."
   (let* ((email (plist-get contact :email)))
-      (insert (concat email "; ")))
-)
+      (insert (concat email "; "))))
 
 (defun consult-mu-contacts--insert-email-action (cand)
   "inserts the email from contact candidate, CAND.
@@ -2779,19 +2639,15 @@ This is a wrapper function around `consult-mu-contacts--insert-email'. It parses
 
 To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--insert-email-action."
   (let* ((info (cdr cand))
-         (contact (plist-get info :contact))
-         )
-    (consult-mu-contacts--insert-email contact)
-    )
-)
+         (contact (plist-get info :contact)))
+    (consult-mu-contacts--insert-email contact)))
 #+end_src
 *** copy contact
 #+begin_src emacs-lisp
 (defun consult-mu-contacts--copy-email (contact)
   "copy email of CONTACT to kill ring."
   (let* ((email (plist-get contact :email)))
-      (kill-new email))
-)
+      (kill-new email)))
 
 (defun consult-mu-contacts--copy-email-action (cand)
   "Copies the email from contact candidate, CAND, to kill ring.
@@ -2800,11 +2656,8 @@ This is a wrapper function around `consult-mu-contacts--copy-email'. It parses C
 
 To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--copy-email-action."
   (let* ((info (cdr cand))
-         (contact (plist-get info :contact))
-         )
-    (consult-mu-contacts--copy-email contact)
-    )
-)
+         (contact (plist-get info :contact)))
+    (consult-mu-contacts--copy-email contact)))
 
 #+end_src
 *** compose email
@@ -2812,8 +2665,7 @@ To use this as the default action for consult-mu-contacts, set `consult-mu-conta
 (defun consult-mu-contacts--compose-to (contact)
   "compose an email to CONTACT using `mu4e-compose-new'."
   (let* ((email (plist-get contact :email)))
-         (mu4e-compose-new email)
-))
+         (mu4e-compose-new email)))
 
 (defun consult-mu-contacts--compose-to-action (cand)
   "Open a new buffer to compose a message to contact candidate, CAND.
@@ -2823,11 +2675,8 @@ This is a wrapper function around `consult-mu-contacts--compose-to'. It parses C
 To use this as the default action for consult-mu-contacts, set `consult-mu-contacts-default-action' to #'consult-mu-contacts--compose-to-action."
 
   (let* ((info (cdr cand))
-         (contact (plist-get info :contact))
-         )
-    (consult-mu-contacts--compose-to contact)
-    )
-)
+         (contact (plist-get info :contact)))
+    (consult-mu-contacts--compose-to contact)))
 #+end_src
 ** Fontend Interactive Commands
 **** consult-mu-contacts
@@ -2845,10 +2694,8 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
          (match-str (if (stringp input) (consult--split-escaped (car (consult--command-split query))) nil))
          (str (format "%s\s\s%s"
                       (propertize (consult-mu--set-string-width email (floor (* (frame-width) 0.55))) 'face 'consult-mu-sender-face)
-                      (propertize name 'face 'consult-mu-subject-face)
-                      ))
-         (str (propertize str :contact contact :query query))
-         )
+                      (propertize name 'face 'consult-mu-subject-face)))
+         (str (propertize str :contact contact :query query)))
     (if (and consult-mu-highlight-matches highlight)
         (cond
          ((listp match-str)
@@ -2873,11 +2720,8 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
                        (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "to"))
                        (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "cc"))
                        (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "bcc"))
-                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "reply-to"))
-                       )
-               ))
-      (_
-       (list)))))
+                       (consult-mu--message-emails-string-to-list (consult-mu--message-get-header-field "reply-to")))))
+      (_ (list)))))
 #+end_src
 ***** group
 #+begin_src emacs-lisp
@@ -2898,16 +2742,14 @@ See `consult-mu-contacts-group-by' for details of grouping options.
         (:name (if (string-empty-p name) "n/a" name))
         (:domain domain)
         (:user user)
-        (_ nil)
-        )))
+        (_ nil))))
 
 (defun consult-mu-contacts--group (cand transform)
 "Group function for `consult-mu-contacts''s minibuffer candidates.
 
 This is passed as GROUP to `consult--read' on candidates and is used to group contacts using `consult-mu-contacts--group-name'."
   (when-let ((name (consult-mu-contacts--group-name cand)))
-    (if transform (substring cand) name)
-    ))
+    (if transform (substring cand) name)))
 #+end_src
 
 ***** lookup
@@ -2920,10 +2762,8 @@ This is passed as LOOKUP to `consult--read' on candidates and is used to format 
     (let* ((info (cdr (assoc sel cands)))
            (contact  (plist-get info :contact))
            (name (plist-get contact :name))
-           (email (plist-get contact :email))
-           )
-      (cons (or name email) info)
-      )))
+           (email (plist-get contact :email)))
+      (cons (or name email) info))))
 #+end_src
 
 ***** predicate
@@ -2940,11 +2780,10 @@ note that `consult-mu-contacts-ignore-case-fold-search' is used to define case (
        (name (plist-get contact :name))
        (case-fold-search consult-mu-contacts-ignore-case-fold-search))
   (if (seq-empty-p (seq-filter (lambda (reg) (or (string-match-p reg email)
-                                            (string-match-p reg name))
-                                                 ) consult-mu-contacts-ignore-list))
-          t
-      nil)
-      ))
+                                            (string-match-p reg name)))
+                               consult-mu-contacts-ignore-list))
+      t
+    nil)))
 #+end_src
 ***** state/preview
 #+begin_src emacs-lisp
@@ -2954,41 +2793,26 @@ This is passed as STATE to `consult--read' and is used to preview or do other ac
   (lambda (action cand)
     (let ((preview (consult--buffer-preview)))
       (pcase action
-        ('preview
-        )
+        ('preview)
         ('return
          (save-mark-and-excursion
-           (consult-mu--execute-all-marks)
-           )
+           (consult-mu--execute-all-marks))
          (setq consult-mu-contacts--override-group nil)
-         cand)
-        ))))
+         cand)))))
 
 #+end_src
 
 
 ***** transform
-#+begin_src emacs-lisp
-(defun consult-mu-contacts--transform (async builder)
+#+begin_src emacs-lisp :lexical t
+(defun consult-mu-contacts--transform (input)
   "Adds annotation to minibuffer candiates for `consult-mu-contacts'.
 
-Returns ASYNC function after formating results with `consult-mu-contacts--format-candidate'.
-BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-builder')."
-  (let ((input))
-    `(lambda (action)
-       (cond
-        ((stringp action)
-         (setq input action)
-         (funcall ,async action)
-         )
-        ((consp action)
-         (funcall ,async (mapcar (lambda (string)
-                      (consult-mu-contacts--format-candidate string input t))
-                    action))
-         )
-         (t (funcall ,async action))
-         )
-         )))
+Format each candidates with `consult-gh--repo-format' and INPUT."
+  (lambda (cands)
+    (cl-loop for cand in cands
+             collect
+             (consult-mu-contacts--format-candidate cand input t))))
 #+end_src
 
 ***** builder
@@ -3009,10 +2833,8 @@ BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-b
           (setq opts (remove "-g" (remove (ignore-errors (nth (+ (cl-position "-g" opts :test 'equal) 1) opts)) opts))))
          ((member "--group" opts)
           (setq consult-mu-contacts--override-group (ignore-errors (intern (nth (+ (cl-position "--group" opts :test 'equal) 1) opts))))
-          (setq opts (remove "--group" (remove (ignore-errors (nth (+ (cl-position "--group" opts :test 'equal) 1) opts)) opts))))
-         )
-      (setq consult-mu-contacts--override-group nil)
-      )
+          (setq opts (remove "--group" (remove (ignore-errors (nth (+ (cl-position "--group" opts :test 'equal) 1) opts)) opts)))))
+      (setq consult-mu-contacts--override-group nil))
     (pcase-let* ((`(,re . ,hl) (funcall consult--regexp-compiler arg 'pcre t)))
       (when re
         (cons (append cmd
@@ -3023,7 +2845,7 @@ BUILDER is the command line builder function (e.g. `consult-mu-contacts--async-b
 
 
 ***** internal async command
-#+begin_src emacs-lisp
+#+begin_src emacs-lisp :lexical t
 (defun consult-mu-contacts--async (prompt builder &optional initial)
 "Query mu4e contacts asynchronously.
 
@@ -3050,13 +2872,12 @@ For example:
 will retrieve the message as the example above, then narrows down the completion table to candidates that match \"@gmail\".
 "
   (consult--read
-   (consult--async-command builder
-     (consult-mu-contacts--transform builder)
-     )
+   (consult--process-collection builder
+     :transform (consult--async-transform-by-input #'consult-mu-contacts--transform))
    :prompt prompt
    :lookup (consult-mu-contacs--lookup)
    :state (funcall #'consult-mu-contacts--state)
-   :initial (consult--async-split-initial initial)
+   :initial initial
    :group #'consult-mu-contacts--group
    :add-history (consult-mu-contacts--add-history)
    :history '(:input consult-mu-contacts--history)
@@ -3103,15 +2924,11 @@ For more details on consult--async functionalities, see `consult-grep' and the o
 "
   (interactive)
   (save-mark-and-excursion
-  (consult-mu--execute-all-marks)
-  )
+  (consult-mu--execute-all-marks))
   (let* ((sel
-        (consult-mu-contacts--async (concat "[" (propertize "consult-mu-contacts" 'face 'consult-mu-sender-face) "]" " Search Contacts:  ") #'consult-mu-contacts--builder initial)
-         )
-         )
+        (consult-mu-contacts--async (concat "[" (propertize "consult-mu-contacts" 'face 'consult-mu-sender-face) "]" " Search Contacts:  ") #'consult-mu-contacts--builder initial)))
     (save-mark-and-excursion
-      (consult-mu--execute-all-marks)
-      )
+      (consult-mu--execute-all-marks))
     (if noaction
         sel
       (progn
@@ -3227,8 +3044,7 @@ This section includes additional useful embark actions as well as possible keyma
   (let* ((contact (get-text-property 0 :contact cand))
          (query (get-text-property 0 :query cand))
          (newcand (cons cand `(:contact ,contact :query ,query))))
-    (funcall #'consult-mu-contacts--insert-email-action newcand))
-  )
+    (funcall #'consult-mu-contacts--insert-email-action newcand)))
 
 ;;; Define Embark Keymaps
 (defvar-keymap consult-mu-embark-contacts-actions-map
@@ -3238,8 +3054,7 @@ This section includes additional useful embark actions as well as possible keyma
   "s" #'consult-mu-contacts-embark-search-messages
   "i" #'consult-mu-contacts-embark-insert-email
   "w" #'consult-mu-contacts-embark-kill-email
-  "a" #'consult-mu-contacts-embark-get-alternative
-  )
+  "a" #'consult-mu-contacts-embark-get-alternative)
 
 
 (add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
