@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250114"))
+;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
 
