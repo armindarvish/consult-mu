@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250114"))
+;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
@@ -86,8 +86,7 @@
   (let* ((contact (get-text-property 0 :contact cand))
          (query (get-text-property 0 :query cand))
          (newcand (cons cand `(:contact ,contact :query ,query))))
-    (funcall #'consult-mu-contacts--insert-email-action newcand))
-  )
+    (funcall #'consult-mu-contacts--insert-email-action newcand)))
 
 ;;; Define Embark Keymaps
 (defvar-keymap consult-mu-embark-contacts-actions-map
@@ -97,8 +96,7 @@
   "s" #'consult-mu-contacts-embark-search-messages
   "i" #'consult-mu-contacts-embark-insert-email
   "w" #'consult-mu-contacts-embark-kill-email
-  "a" #'consult-mu-contacts-embark-get-alternative
-  )
+  "a" #'consult-mu-contacts-embark-get-alternative)
 
 
 (add-to-list 'embark-keymap-alist '(consult-mu-contacts . consult-mu-embark-contacts-actions-map))
