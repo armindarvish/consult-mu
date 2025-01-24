@@ -521,19 +521,20 @@ This function converts each character in FLAG to an expanded string of the flag 
 
 (defun consult-mu--message-get-header-field (&optional field)
   "Retrive FIELD header from the message/mail in the current buffer"
-  (save-excursion
-  (when (or (derived-mode-p 'message-mode)
-            (derived-mode-p 'mu4e-view-mode)
-            (derived-mode-p 'org-msg-edit-mode)
-            (derived-mode-p 'mu4e-compose-mode))
-    (let ((field (or field
-                     (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
-                      :prompt "Header Field: ")))))
-      (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
-      (goto-char (point-min))
-      (let* ((match (re-search-forward (concat "^" field ": ") nil t))
-            (str (if match (string-trim (buffer-substring-no-properties (point) (point-at-eol))))))
-        (if (string-empty-p str) nil str))))))
+  (save-match-data
+    (save-excursion
+      (when (or (derived-mode-p 'message-mode)
+                (derived-mode-p 'mu4e-view-mode)
+                (derived-mode-p 'org-msg-edit-mode)
+                (derived-mode-p 'mu4e-compose-mode))
+        (let ((field (or field
+                         (s-lower-camel-case (consult--read '("Subject" "From" "To" "Cc" "Bcc" "Reply-To" "Date" "Attachments" "Tags" "Flags" "Maildir" "Summary")
+                                                            :prompt "Header Field: ")))))
+          (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
+          (goto-char (point-min))
+          (let* ((match (re-search-forward (concat "^" field ": \\(?1:[[:ascii:][:nonascii:]]+?\\)\n.*?: ") nil t))
+                 (str (if match (string-trim (match-string 1)))))
+            (if (string-empty-p str) nil str)))))))
 
 (defun consult-mu--headers-append-handler (msglst)
   "Overrides `mu4e~headers-append-handler' for `consult-mu'.

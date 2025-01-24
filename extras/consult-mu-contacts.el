@@ -192,7 +192,7 @@ if HIGHLIGHT is t, input is highlighted with `consult-mu-highlight-match-face' i
   "Make a list of emails from current buffer to add to `consult-mu-contacts''s history."
   (let ((add (list)))
     (pcase major-mode
-      ((or 'mu4e-view-mode 'mu4e-compose-mode 'org-msg-edit-mode 'message-mode)
+      ((or mu4e-view-mode mu4e-compose-mode org-msg-edit-mode message-mode)
        (mapcar (lambda (item)
                  (concat "#" (consult-mu--message-extract-email-from-string item)))
                (append add
