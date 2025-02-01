@@ -12,7 +12,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0"))
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
 
@@ -1721,7 +1721,7 @@ For example, the `consult-mu-default-command can be set to
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
@@ -1978,7 +1978,7 @@ This is useful for adding all `mu4e-marks' to embark key bindings under a submen
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
@@ -2415,7 +2415,7 @@ INITIAL is the initial input in the minibuffer."
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
@@ -2495,7 +2495,7 @@ If KEY is non-nil binds KEY instead of `consult-mu-embark-attach-file-key'."
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
@@ -2960,7 +2960,7 @@ For more details on consult--async functionalities, see `consult-grep' and the o
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "20250121.1423"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
