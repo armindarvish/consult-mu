@@ -590,7 +590,7 @@ This function converts each character in FLAG to an expanded string of the flag 
                                                             :prompt "Header Field: ")))))
           (if (equal field "attachments") (setq field "\\(attachment\\|attachments\\)"))
           (goto-char (point-min))
-          (let* ((match (re-search-forward (concat "^" field ": \\(?1:[[:ascii:][:nonascii:]]+?\\)\n.*?: ") nil t))
+          (let* ((match (re-search-forward (concat "^" field ": \\(?1:[[:ascii:][:nonascii:]]*?\\)\n.*?\\(: \\|--\\)") nil t))
                  (str (if match (string-trim (match-string 1)))))
             (if (string-empty-p str) nil str)))))))
 #+end_src
