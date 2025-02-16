@@ -107,7 +107,7 @@
 
     (with-current-buffer consult-mu-view-buffer-name
       (kill-new (consult-mu--message-get-header-field))
-      (consult-mu--pulse-region (point) (point-at-eol)))))
+      (consult-mu--pulse-region (point) (pos-eol)))))
 
 (defun consult-mu-embark-save-attachmnts (cand)
   "Save attachments of CAND."
@@ -130,7 +130,7 @@
     (with-current-buffer consult-mu-view-buffer-name
       (goto-char (point-min))
       (re-search-forward "^\\(Attachment\\|Attachments\\): " nil t)
-      (consult-mu--pulse-region (point) (point-at-eol))
+      (consult-mu--pulse-region (point) (pos-eol))
       (mu4e-view-save-attachments t))))
 
 (defun consult-mu-embark-search-messages-from-contact (cand)
