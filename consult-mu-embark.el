@@ -94,7 +94,6 @@
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
-         (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
          (msg-id (plist-get msg :message-id)))
     (if (equal type :async)
         (consult-mu--update-headers query t msg :async))
@@ -114,7 +113,6 @@
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
-         (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
          (msg-id (plist-get msg :message-id)))
 
     (if (equal type :async)
