@@ -51,7 +51,7 @@
 
 ;;; Define Embark Action Functions
 (defun consult-mu-embark-default-action (cand)
-  "Run `consult-mu-action' on the candidate."
+  "Run `consult-mu-action' on the candidate, CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
@@ -94,7 +94,6 @@
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
-         (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
          (msg-id (plist-get msg :message-id)))
     (if (equal type :async)
         (consult-mu--update-headers query t msg :async))
@@ -107,14 +106,13 @@
 
     (with-current-buffer consult-mu-view-buffer-name
       (kill-new (consult-mu--message-get-header-field))
-      (consult-mu--pulse-region (point) (point-at-eol)))))
+      (consult-mu--pulse-region (point) (line-end-position)))))
 
 (defun consult-mu-embark-save-attachmnts (cand)
   "Save attachments of CAND."
   (let* ((msg (get-text-property 0 :msg cand))
          (query (get-text-property 0 :query cand))
          (type (get-text-property 0 :type cand))
-         (newcand (cons cand `(:msg ,msg :query ,query :type ,type)))
          (msg-id (plist-get msg :message-id)))
 
     (if (equal type :async)
@@ -130,7 +128,7 @@
     (with-current-buffer consult-mu-view-buffer-name
       (goto-char (point-min))
       (re-search-forward "^\\(Attachment\\|Attachments\\): " nil t)
-      (consult-mu--pulse-region (point) (point-at-eol))
+      (consult-mu--pulse-region (point) (line-end-position))
       (mu4e-view-save-attachments t))))
 
 (defun consult-mu-embark-search-messages-from-contact (cand)
@@ -184,9 +182,12 @@
 
 ;; add embark functions for marks
 (defun consult-mu-embark--defun-func-for-marks (marks)
-  "Runs the macro `consult-mu-embark--defun-mark-for' on a list of marks.
+  "Run the macro `consult-mu-embark--defun-mark-for' on MARKS.
 
-This is useful for creating embark functions for all the `mu4e-marks' elements."
+MARKS is a list of marks.
+
+This is useful for creating embark functions for all the `mu4e-marks'
+elements."
   (mapcar (lambda (mark) (eval `(consult-mu-embark--defun-mark-for ,mark))) marks))
 
 ;; use consult-mu-embark--defun-func-for-marks to make a function for each `mu4e-marks' element.
@@ -216,11 +217,16 @@ This is useful for creating embark functions for all the `mu4e-marks' elements."
 
 ;; add mark keys to `consult-mu-embark-messages-actions-map' keymap
 (defun consult-mu-embark--add-keys-for-marks (marks)
-  "Adds a key for each mark in MARKS to `consult-mu-embark-messages-actions-map'.
+  "Add a key for each mark in MARKS to embark map.
 
-Binds the combination “m key”, where key is the :char in mark plist in the `consult-mu-embark-messages-actions-map' to the function defined by the prefix “consult-mu-embark-mark-for-” and mark.
+Adds the keys in `consult-mu-embark-messages-actions-map', and binds the
+combination “m key”, where key is the :char in mark plist in the
+`consult-mu-embark-messages-actions-map' to the function defined by the
+prefix “consult-mu-embark-mark-for-” and mark.
 
-This is useful for adding all `mu4e-marks' to embark key bindings under a submenu (called by “m”) ,for example the default mark-for-archive mark that is bound to r in mu4e buffers can be called in embark by “m r”."
+This is useful for adding all `mu4e-marks' to embark key bindings under a
+submenu (called by “m”), for example, the default mark-for-archive mark
+that is bound to r in mu4e buffers can be called in embark by “m r”."
   (mapcar (lambda (mark)
             (let* ((key (plist-get (cdr mark) :char))
                    (key (cond ((consp key) (car key)) ((stringp key) key)))
@@ -240,4 +246,4 @@ This is useful for adding all `mu4e-marks' to embark key bindings under a submen
 
 (provide 'consult-mu-embark)
 
-;;;  consult-mu-embark.el ends here
+;;; consult-mu-embark.el ends here
