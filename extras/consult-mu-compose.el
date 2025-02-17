@@ -1,4 +1,4 @@
-;;; consult-mu-compose.el --- Consult Mu4e asynchronously in GNU Emacs -*- lexical-binding: t -*-
+;;; consult-mu-compose.el --- Consult Mu4e asynchronously -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2023 Armin Darvish
 
@@ -43,21 +43,25 @@
 
 ;;; Customization Variables
 (defcustom consult-mu-compose-use-dired-attachment 'in-dired
-  "Use a dired buffer for multiple file attachment?
-If set to 'in-dired uses dired buffer and dired marks only when inside dired buffer
-If 't, consult-mu will always use dired buffer for selecting attachment files similar to what Doom Emacs does (see https://github.com/doomemacs/doomemacs/blob/bea81278fd2ecb65db6a63dbcd6db2f52921ee41/modules/email/mu4e/autoload/email.el#L272).
+  "Use a Dired buffer for multiple file attachment?
 
-If 'nil, consult-mu uses minibuffer completion for selection files to attach even if inside a dired buffer.
+If set to \='in-dired uses `dired' buffer and `dired' marks only when inside
+a `dired' buffer.  If \='t, a `dired' buffer will be used for selecting attachment files similar to what Doom Emacs does:
+URL `https://github.com/doomemacs/doomemacs/blob/bea81278fd2ecb65db6a63dbcd6db2f52921ee41/modules/email/mu4e/autoload/email.el#L272'.
 
-By default this is set to 'in-dired."
+If \='nil, consult-mu uses minibuffer completion for selection files to
+attach, even if inside a `dired' buffer.
+
+By default this is set to \='in-dired."
   :group 'consult-mu
   :type '(choice (const :tag "Only use Dired if inside Dired Buffer" 'in-dired)
                  (const :tag "Always use Dired" t)
                  (const :tag "Never use Dired" nil)))
 
 (defcustom consult-mu-large-file-warning-threshold large-file-warning-threshold
-  "Threshold for size of file to require confirmation for preview when selecting files to attach to emails.
-Files larger than this value in size will require user confirmation before previewing the file. Default value is set by `large-file-warning-threshold'. If nil, no cofnirmation is required."
+  "Threshold for size of file to require confirmation for preview.
+
+This is used when selecting files to attach to emails.  Files larger than this value in size will require user confirmation before previewing the file.  Default value is set by `large-file-warning-threshold'.  If nil, no cofnirmation is required."
   :group 'consult-mu
   :type '(choice integer (const :tag "Never request confirmation" nil)))
 
@@ -65,8 +69,9 @@ Files larger than this value in size will require user confirmation before previ
 (defcustom consult-mu-compose-preview-key consult-mu-preview-key
   "Preview key for `consult-mu-compose'.
 
-This is similar to `consult-mu-preview-key' but explicitly for consult-mu-compose.
-It is recommended to set this to something other than 'any to avoid loading preview buffers for each file."
+This is similar to `consult-mu-preview-key' but explicitly for
+consult-mu-compose.  It is recommended to set this to something other than
+\='any to avoid loading preview buffers for each file."
   :group 'consult-mu
   :type '(choice (const :tag "Any key" any)
                  (list :tag "Debounced"
@@ -84,10 +89,12 @@ It is recommended to set this to something other than 'any to avoid loading prev
                  (const :tag "no key binding" nil)))
 
 (defvar consult-mu-compose-attach-history nil
-  "History variable for file attachment used in `consult-mu-compose--read-file-attach'.")
+  "History variable for file attachment.
+
+It is used in `consult-mu-compose--read-file-attach'.")
 
 (defvar consult-mu-compose-current-draft-buffer nil
-  "Stores the buffer that is being edited.")
+  "Store the buffer that is being edited.")
 
 (defun consult-mu-compose--read-file-attach (&optional initial)
   "Read files in the minibuffer to attach to an email.
@@ -113,7 +120,7 @@ INITIAL is the initial input in the minibuffer."
                                                         (file-attributes filename))))
                                             (confirm (if (and filename
                                                               (>= filesize consult-mu-large-file-warning-threshold))
-                                                         (yes-or-no-p (format "File is %s Bytes. Do you really want to preview it?" filesize))
+                                                         (yes-or-no-p (format "File is %s Bytes.  Do you really want to preview it?" filesize))
                                                        t)))
                                        (if confirm
                                            (funcall preview action
@@ -155,7 +162,7 @@ INITIAL is the initial input in the minibuffer."
                                                             (file-attributes filename))))
                                                 (confirm (if (and filename
                                                                   (>= filesize consult-mu-large-file-warning-threshold))
-                                                             (yes-or-no-p (format "File is %s Bytes. Do you really want to preview it?" filesize))
+                                                             (yes-or-no-p (format "File is %s Bytes.  Do you really want to preview it?" filesize))
                                                            t)))
                                            (if confirm
                                                (funcall preview action
@@ -169,7 +176,7 @@ INITIAL is the initial input in the minibuffer."
       nil)))
 
 (defun consult-mu-compose-get-draft-buffer ()
-  "Queries user to select a mu4e compose draft buffer"
+  "Query user to select a mu4e compose draft buffer."
   (save-excursion
   (if (and (consult-mu-compose-get-current-buffers)
            (y-or-n-p "Attach the files to an existing compose buffer? "))
@@ -203,8 +210,8 @@ INITIAL is the initial input in the minibuffer."
           (push (buffer-name buffer) buffers))))
     (nreverse buffers)))
 
-(defun consult-mu-compose--attach-files (files &optional mail-buffer &rest args)
-  "Attach FILE to email in MAIL-BUFFER compose buffer."
+(defun consult-mu-compose--attach-files (files &optional mail-buffer &rest _args)
+  "Attach FILES to email in MAIL-BUFFER compose buffer."
   (let ((files (if (stringp files) (list files) files))
         (mail-buffer (or mail-buffer (if (version<= mu4e-mu-version "1.12")
                                  (mu4e-compose 'new) (mu4e-compose-new)))))
@@ -231,8 +238,8 @@ INITIAL is the initial input in the minibuffer."
         (_
          (error "%s is not a compose buffer" (current-buffer)))))))
 
-(defun consult-mu-compose--remove-files (files &optional mail-buffer &rest args)
-  "Removes FILES from current attachments in MAIL-BUFFER."
+(defun consult-mu-compose--remove-files (files &optional mail-buffer &rest _args)
+  "Remove FILES from current attachments in MAIL-BUFFER."
   (let ((files (if (stringp files) (list files) files))
         (mail-buffer (or mail-buffer (current-buffer))))
     (with-current-buffer mail-buffer
@@ -265,7 +272,9 @@ INITIAL is the initial input in the minibuffer."
              (message "file(s) %s detached" (mapconcat 'identity removed-files ", ")))))))))
 
 (defun consult-mu-compose-attach (&optional files mail-buffer)
-  "Attach FILES to email interactively."
+  "Attach FILES to email in MAIL-BUFFER interactively.
+
+MAIL-BUFFER defaults to `consult-mu-compose-current-draft-buffer'."
   (interactive)
   (let* ((consult-mu-compose-current-draft-buffer (cond
                                                    ((or (derived-mode-p 'mu4e-compose-mode) (derived-mode-p 'org-msg-edit-mode) (derived-mode-p 'message-mode)) (current-buffer))
@@ -386,4 +395,4 @@ INITIAL is the initial input in the minibuffer."
 ;;; provide `consult-mu-compose' module
 (provide 'consult-mu-compose)
 
-;;;  consult-mu-compose.el ends here
+;;; consult-mu-compose.el ends here
