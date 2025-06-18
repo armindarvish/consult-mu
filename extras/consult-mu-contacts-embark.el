@@ -50,7 +50,7 @@
   "Embark function for inserting CAND's email."
   (let* ((contact (get-text-property 0 :contact cand))
          (email (plist-get contact :email)))
-    (insert (concat email "; "))))
+    (insert (concat email consult-mu-contacts-email-separator " "))))
 
 (defun consult-mu-contacts-embark-kill-email (cand)
   "Embark function for copying CAND's email."

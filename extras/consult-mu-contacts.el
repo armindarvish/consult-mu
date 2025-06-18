@@ -91,6 +91,14 @@ By default it is inherited from `case-fold-search'."
   :group 'consult-mu
   :type 'boolean)
 
+
+(defcustom consult-mu-contacts-email-separator ","
+  "Separator to insert after contact's email
+
+This is used in `consult-mu-contacts--insert-email'."
+  :group 'consult-mu
+  :type 'string)
+
 ;;; Other Variables
 
 (defvar consult-mu-contacts-category 'consult-mu-contacts
@@ -129,7 +137,7 @@ To use this as the default action for consult-mu-contacts, set
 
 This is useful for inserting email when composing an email to contact."
   (let* ((email (plist-get contact :email)))
-    (insert (concat email "; "))))
+    (insert (concat email consult-mu-contacts-email-separator " "))))
 
 (defun consult-mu-contacts--insert-email-action (cand)
   "Insert the email from contact candidate, CAND.

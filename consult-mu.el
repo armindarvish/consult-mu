@@ -1039,11 +1039,11 @@ See `consult-mu-group-by' for details of grouping options."
       (:date (format-time-string "%a %d %b %y" (plist-get msg field)))
       (:from (cond
               ((listp (plist-get msg field))
-               (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+               (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ","))
               ((stringp (plist-get msg field)) (plist-get msg field))))
       (:to (cond
             ((listp (plist-get msg field))
-             (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+             (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ","))
             ((stringp (plist-get msg field)) (plist-get msg field))))
       (:changed (format-time-string "%a %d %b %y" (plist-get msg field)))
       (:datetime (format-time-string "%F %r" (plist-get msg :date)))

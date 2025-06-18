@@ -1171,11 +1171,11 @@ See `consult-mu-group-by' for details of grouping options."
       (:date (format-time-string "%a %d %b %y" (plist-get msg field)))
       (:from (cond
               ((listp (plist-get msg field))
-               (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+               (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ","))
               ((stringp (plist-get msg field)) (plist-get msg field))))
       (:to (cond
             ((listp (plist-get msg field))
-             (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ";"))
+             (mapconcat (lambda (item) (or (plist-get item :name) (plist-get item :email))) (plist-get msg field) ","))
             ((stringp (plist-get msg field)) (plist-get msg field))))
       (:changed (format-time-string "%a %d %b %y" (plist-get msg field)))
       (:datetime (format-time-string "%F %r" (plist-get msg :date)))
@@ -2785,6 +2785,15 @@ By default it is inherited from `case-fold-search'."
   :group 'consult-mu
   :type 'boolean)
 
+
+(defcustom consult-mu-contacts-email-separator ","
+  "Separator to insert after contact's email
+
+This is used in `consult-mu-contacts--insert-email'."
+  :group 'consult-mu
+  :type 'string)
+
+
 #+end_src
 
 *** Other Variables
@@ -2835,7 +2844,7 @@ To use this as the default action for consult-mu-contacts, set
 
 This is useful for inserting email when composing an email to contact."
   (let* ((email (plist-get contact :email)))
-    (insert (concat email "; "))))
+    (insert (concat email consult-mu-contacts-email-separator " "))))
 
 (defun consult-mu-contacts--insert-email-action (cand)
   "Insert the email from contact candidate, CAND.
@@ -3273,7 +3282,7 @@ This section includes additional useful embark actions as well as possible keyma
   "Embark function for inserting CAND's email."
   (let* ((contact (get-text-property 0 :contact cand))
          (email (plist-get contact :email)))
-    (insert (concat email "; "))))
+    (insert (concat email consult-mu-contacts-email-separator " "))))
 
 (defun consult-mu-contacts-embark-kill-email (cand)
   "Embark function for copying CAND's email."
