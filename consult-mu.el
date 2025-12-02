@@ -263,6 +263,13 @@ This defines whether `consult-mu--reply-action' should reply to all or not."
                  (const :tag "Do not reply to all" nil)
                  (const :tag "Always reply to all" t)))
 
+(defcustom consult-mu-preview-function #'consult-mu--preview
+"The function that is used when previewing a message.
+By default it is bound to `consult-mu--preview'."
+  :group 'consult-mu
+  :type '(choice (function :tag "(Default) View Message a the preview buffer" consult-mu--preview)
+                 (function :tag "Custom Function")))
+
 (defcustom consult-mu-action #'consult-mu--view-action
   "The function that is used when selecting a message.
 By default it is bound to `consult-mu--view-action'."
@@ -386,6 +393,12 @@ By default inherits from `font-lock-function-call-face'.")
   "URL face in `consult-mu' minibuffer annotations;
 
 By default inherits from `link'.")
+
+(defface consult-mu-maildir-face
+  `((t :inherit 'font-lock-function-name-face))
+  "Maildir face in `consult-mu' minibuffer annotations;
+
+By default inherits from `font-lock-function-name-face'.")
 
 (defun consult-mu--pulse-regexp (regexp)
   "Find and pulse REGEXP."
@@ -993,7 +1006,7 @@ STRING."
                             ("m" (let ((maildir (plist-get msg :maildir))
                                        (length (string-to-number (substring c 1 nil))))
                                    (if maildir
-                                       (propertize (if (> length 0) (consult-mu--set-string-width maildir length) maildir) 'face 'consult-mu-count-face))))
+                                       (propertize (if (> length 0) (consult-mu--set-string-width maildir length) maildir) 'face 'consult-mu-maildir-face))))
                             (_ nil))
                           "  ")))
 
@@ -1125,6 +1138,25 @@ To use this as the default action for `consult-mu', set
     (consult-mu--view msg nil consult-mu-mark-viewed-as-read match-str)
     (consult-mu-overlays-toggle consult-mu-view-buffer-name)))
 
+(defun consult-mu--preview (cand)
+  "Preview the candidate, CAND.
+
+This is used to create a preview of message in
+`consult-mu-view-buffer-name' when `consult-mu-preview-key' is pressed
+in the minibuffer."
+      (when-let* ((info (cdr cand))
+                  (msg (plist-get info :msg))
+                  (msgid (substring-no-properties (plist-get msg :message-id)))
+                  (query (plist-get info :query))
+                  (match-str (car (consult--command-split query)))
+                  (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
+                  (buffer consult-mu-view-buffer-name))
+        (add-to-list 'consult-mu--view-buffers-list buffer)
+        (funcall (consult--buffer-preview) 'preview
+                 (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str))
+        (with-current-buffer consult-mu-view-buffer-name
+          (unless (one-window-p) (delete-other-windows)))))
+
 (defun consult-mu--reply (msg &optional wide-reply)
   "Reply to MSG using `mu4e-compose-reply'.
 
@@ -1251,29 +1283,15 @@ messages."
 This is passed as STATE to `consult--read' and is used to preview or do
 other actions on the candidate."
   (lambda (action cand)
-    (let ((preview (consult--buffer-preview)))
-      (pcase action
-        ('preview
-         (if cand
-             (when-let* ((info (cdr cand))
-                         (msg (plist-get info :msg))
-                         (query (plist-get info :query))
-                         (msgid (substring-no-properties (plist-get msg :message-id)))
-                         (match-str (car (consult--command-split query)))
-                         (match-str (car (consult--command-split query)))
-                         (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
-                         (buffer consult-mu-view-buffer-name))
-               ;;(get-buffer-create consult-mu-view-buffer-name)
-               (add-to-list 'consult-mu--view-buffers-list buffer)
-               (funcall preview action
-                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str))
-               (with-current-buffer consult-mu-view-buffer-name
-                 (unless (one-window-p) (delete-other-windows))))))
-        ('return
-         (save-mark-and-excursion
-           (consult-mu--execute-all-marks))
-         (setq consult-mu--override-group nil)
-         cand)))))
+    (pcase action
+      ('preview
+       (if cand
+           (funcall consult-mu-preview-function cand)))
+      ('return
+       (save-mark-and-excursion
+         (consult-mu--execute-all-marks))
+       (setq consult-mu--override-group nil)
+         cand))))
 
 (defun consult-mu--dynamic (prompt collection &optional initial)
   "Query mu4e messages dyunamically.
@@ -1448,26 +1466,14 @@ If HIGHLIGHT is t, input is highlighted with
 This is passed as STATE to `consult--read' and is used to preview or do
 other actions on the candidate."
   (lambda (action cand)
-    (let ((preview (consult--buffer-preview)))
       (pcase action
         ('preview
          (if cand
-             (when-let* ((info (cdr cand))
-                         (msg (plist-get info :msg))
-                         (msgid (substring-no-properties (plist-get msg :message-id)))
-                         (query (plist-get info :query))
-                         (match-str (car (consult--command-split query)))
-                         (mu4e-headers-buffer-name consult-mu-headers-buffer-name)
-                         (buffer consult-mu-view-buffer-name))
-               (add-to-list 'consult-mu--view-buffers-list buffer)
-               (funcall preview action
-                        (consult-mu--view msg t consult-mu-mark-previewed-as-read match-str))
-               (with-current-buffer consult-mu-view-buffer-name
-                 (unless (one-window-p) (delete-other-windows))))))
+             (funcall consult-mu-preview-function cand)))
         ('return
          (save-mark-and-excursion
            (consult-mu--execute-all-marks))
-         cand)))))
+         cand))))
 
 (defun consult-mu--async-transform (input)
   "Add annotation to minibuffer candiates for `consult-mu'.
