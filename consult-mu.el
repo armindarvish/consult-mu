@@ -136,6 +136,7 @@ The list of available fields are:
   %c  cc \(i.e. cc: field of the email\)
   %h  bcc \(i.e. bcc: field of the email\)
   %r  date chaged \(as defined by :changed in mu4e\)
+  %m  maildir \(i.e. mail dir path of email such as “~/maildir/inbox”\)
 
 For exmaple, “%d15%s50” means 15 characters for date and 50 charcters for
 subject, and “%d13%s37%f17” would make a header containing 13 characters
@@ -989,6 +990,10 @@ STRING."
                                        (length (string-to-number (substring c 1 nil))))
                                    (if changed
                                        (propertize (if (> length 0) (consult-mu--set-string-width changed length) changed) 'face 'consult-mu-tags-face))))
+                            ("m" (let ((maildir (plist-get msg :maildir))
+                                       (length (string-to-number (substring c 1 nil))))
+                                   (if maildir
+                                       (propertize (if (> length 0) (consult-mu--set-string-width maildir length) maildir) 'face 'consult-mu-count-face))))
                             (_ nil))
                           "  ")))
 
