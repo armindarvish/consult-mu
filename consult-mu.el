@@ -609,6 +609,21 @@ right for `consult-mu'."
     (with-current-buffer gnus-article-buffer
       (let ((inhibit-read-only t))
         (remove-overlays (point-min) (point-max) 'mu4e-overlay t)
+        ;; Destroy the previously rendered MIME parts *before* the buffer is
+        ;; refilled.  `mu4e-view' kills and recreates its view buffer for every
+        ;; message; we instead recycle a single one, so the handles the previous
+        ;; message left in `gnus-article-mime-handles' survive into this render.
+        ;; Each handle carries an undisplayer closure that remembers the buffer
+        ;; positions of the text it inserted, and `gnus-display-mime' destroys
+        ;; the stale handles only *after* the new message has been inserted --
+        ;; so those undisplayers `delete-region' an arbitrary slice of it.  In
+        ;; practice the whole gnus header block disappears, and mu4e's
+        ;; Flags/Maildir/Attachment lines, inserted at `article-goto-body' (the
+        ;; first blank line), end up after the first line of the body.
+        (when gnus-article-mime-handles
+          (mm-destroy-parts gnus-article-mime-handles)
+          (setq gnus-article-mime-handles nil
+                gnus-article-mime-handle-alist nil))
         (erase-buffer)
         (insert-file-contents-literally
          (mu4e-message-readable-path msg) nil nil nil t)
