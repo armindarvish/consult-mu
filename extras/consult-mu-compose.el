@@ -6,7 +6,7 @@
 ;; Maintainer: Armin Darvish
 ;; Created: 2023
 ;; Version: 1.0
-;; Package-Requires: ((emacs "28.0") (consult "2.0"))
+;; Package-Requires: ((emacs "28.0") (consult "2.0") (goto-chg "0"))
 ;; Homepage: https://github.com/armindarvish/consult-mu
 ;; Keywords: convenience, matching, tools, email
 ;; Homepage: https://github.com/armindarvish/consult-mu
@@ -40,6 +40,7 @@
 ;;; Code:
 
 (require 'consult-mu)
+(require 'goto-chg)
 
 ;;; Customization Variables
 (defcustom consult-mu-compose-use-dired-attachment 'in-dired
